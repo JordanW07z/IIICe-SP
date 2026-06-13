@@ -9,153 +9,174 @@
 
 ## 1. Purpose
 
-SpotShrooms automates mushroom watering to cut spoilage from **overwatering**. The AI camera
-(YOLO, on `YOLO_Model_Code`) decides *whether* to water based on mushroom maturity. This feature
-decides **when** — it monitors the hut's temperature and humidity and uses an AI model to determine
-**the best time of day to irrigate**, tuned for **oyster mushrooms (Pleurotus)** and aware of the
-camera's growth state.
+SpotShrooms automates mushroom watering to cut the 20–30 % annual harvest loss caused by
+**overwatering**. Per the project abstract (*SpotShrooms_IIICe2026_Abstract_v3*), the system pairs a
+three-class computer-vision growth-stage classifier with automated irrigation, plus a combined
+temperature/humidity sensor providing **continuous microclimate telemetry** to a cloud dashboard, and
+targets **water-use efficiency (UN SDG 12)**.
 
-The module must be **small enough to later embed on a Raspberry Pi**, and must work **before any
-hardware exists** by using synthetic data.
+The AI camera (YOLO, on `YOLO_Model_Code`) decides *whether* to water based on mushroom maturity.
+**This feature decides *when*** — it learns the temperature/humidity conditions that optimise oyster
+growth and uses them to determine **the best time of day to irrigate**, aware of the camera's growth
+state. It must be **small enough to embed on a Raspberry Pi** and must work **before any hardware
+exists**, using synthetic data.
 
-## 2. Agronomic basis (cited)
+## 2. The model identifies the optimum (not a hand-written rule)
 
-Per-stage oyster-mushroom requirements that drive the labels and guardrails:
+The regressor's job is to **learn the temperature/humidity → mushroom-growth relationship and identify
+the optimum**, not to reproduce an irrigation rule. Concretely:
 
-- **Colonization / incubation** (no visible mushrooms): ~24–27 °C, ~70 % RH, dark. Surface watering
-  not needed yet.
-- **Pinning / young fruiting** (small & medium): high RH ~85–95 %, fresh air, slight temperature
-  drop initiates pinning. Needs watering when RH falls below the band.
-- **Fruiting → maturation**: 85–90 % RH, ~13–24 °C, **but caps must partially dry between waterings**
-  (≥10 % RH swing) or **bacterial blotch** spoilage results.
-- **Mature**: do **not** water — overwatering mature caps is the core spoilage problem. Harvest
-  imminent.
-- **Timing rule:** disease is probable whenever cap surfaces stay wet after watering. The best
-  irrigation window is therefore one where conditions let the surface dry afterward — i.e. not the
-  peak-humidity cooling evening period that keeps caps wet overnight.
+- The training **label is a growth-quality / biological-efficiency score**, drawn from the published
+  oyster temp×RH response surface (below) — *not* an irrigation heuristic.
+- The model then **finds the optimum** by searching its predicted-growth surface (argmax over
+  temp×RH per stage). Irrigation timing is *derived* from that optimum, never hard-coded.
+
+Using synthetic/online data here is exactly the right move to **prove the pipeline works** now;
+when real hut sensor + harvest data arrives, the same pipeline retrains on it unchanged.
+
+## 3. Agronomic response surface (cited) — oyster, tropical strain
+
+Oyster strains share the **same humidity response**; only the **temperature optimum** is
+strain-dependent. Binh Duong is tropical, so the config defaults to a **warm/tropical oyster strain**
+(*P. florida* / *P. pulmonarius*), temperature config-driven for tuning.
+
+| Stage (camera class) | Temperature | Relative humidity | Notes |
+|---|---|---|---|
+| Colonization / spawn run (`none`) | 25–30 °C | 70–75 % | Substrate moisture only; no surface irrigation. |
+| Pinning / young fruiting (`small_medium`) | drop to 20–24 °C | 85–95 % | Thermal drop triggers pinning; primordia desiccate easily. |
+| Fruiting → mature (`small_medium` → `mature`) | 20–28 °C (best 22–26 °C) | **peak yield ~90 %** | RH→yield rises to ~90 %, **declines past 95 %** (blotch/mould). |
+| Mature (`mature`) | — | — | **Never irrigate** (overwatering = spoilage). |
+
+Response-surface shape used to label synthetic data: growth quality is a **peaked function** — maximal
+near the stage's temperature optimum and RH ≈ 90 %, penalised for **>30 °C** (thermal stress, malformed
+bodies), **>95 % RH** (blotch/mould), and **<75 % RH** (desiccation). *P. florida* is noted as more
+sensitive to RH fluctuation than *P. ostreatus*.
+
+**Timing rule (blotch guardrail):** disease is probable whenever cap surfaces stay wet after watering,
+so the best irrigation window lets surfaces dry afterward — not the peak-humidity cooling evening that
+keeps caps wet overnight.
 
 Sources:
-- [GroCycle — conditions needed for mushrooms](https://grocycle.com/what-conditions-are-needed-for-a-mushroom-to-grow/)
-- [Shroomability — fruiting & incubation temperatures for oyster mushrooms](https://shroomability.com/blogs/news/fruiting-and-incubation-temperatures-for-oyster-mushroom-cultivation-a-comprehensive-guide)
-- [MycoPowered — role of temperature & humidity in colonization vs fruiting](https://www.mycopowered.com/post/the-role-of-temperature-and-humidity-in-mushroom-growth)
+- [IJRRR 2018 — Influence of Temperature & RH on fruiting body production of *Pleurotus florida*](https://www.ijrrr.com/papers11-1/paper16-Influence%20on%20Temperature%20and%20Relative%20Humidity%20on%20Fruiting%20Body%20Production%20of%20Pleurotus%20Florida%20_Oyster%20Mushrooms_%20in%20the%20Cropping%20Room.pdf) — RH→yield peak ~90 %, fruiting 20–28 °C, spawn 25–30 °C/70–75 %, >30 °C stress
+- [ResearchGate — Influence of RH & Temperature on cultivation of *Pleurotus* species](https://www.researchgate.net/publication/324908924_Influence_of_Relative_Humidity_and_Temperature_on_Cultivation_of_Pleurotus_species)
+- [ZombieMyco / Rhizo Funga — *P. pulmonarius* (Phoenix) warm-strain fruiting 18–24 °C, RH 85–95 %](https://rhizofunga.com/blogs/mushroom-teks-recipes/phoenix-oyster-complete-guide-2025)
+- [Shroomability — oyster incubation vs fruiting temperatures](https://shroomability.com/blogs/news/fruiting-and-incubation-temperatures-for-oyster-mushroom-cultivation-a-comprehensive-guide)
 - [Penn State Extension — Bacterial Blotch Disease](https://extension.psu.edu/bacterial-blotch-disease)
-- [ZombieMyco — mushroom cultivation humidity & the ≥10% drying swing](https://zombiemyco.com/blogs/mushrooms/mushroom-cultivation-humidity-how-much-is-enough)
-- [IJRRR — Influence of Temperature and RH on fruiting body production of *Pleurotus florida*](https://www.ijrrr.com/papers11-1/paper16-Influence%20on%20Temperature%20and%20Relative%20Humidity%20on%20Fruiting%20Body%20Production%20of%20Pleurotus%20Florida%20_Oyster%20Mushrooms_%20in%20the%20Cropping%20Room.pdf)
+- [ZombieMyco — cultivation humidity & the ≥10 % drying swing](https://zombiemyco.com/blogs/mushrooms/mushroom-cultivation-humidity-how-much-is-enough)
 
-> **Note:** ranges are seeded from these general sources for the synthetic stand-in. They are
-> centralised in an editable config so the EIU team can refine them against the farm's actual oyster
-> strain and hut conditions.
+> Ranges are literature-seeded for the synthetic stand-in and centralised in editable config, so EIU
+> can refine them against the farm's actual oyster strain and hut.
 
-## 3. Requirements
+## 4. Requirements
 
-- **Inputs:** temperature (°C), relative humidity (%), and growth stage from the camera —
+- **Inputs:** temperature (°C), relative humidity (%), growth stage from the camera —
   `none` / `small_medium` / `mature`.
-- **Outputs:** (a) a real-time `irrigate now / wait` decision; (b) a recommended daily irrigation
-  **time-of-day window** (e.g. "06:30–08:00").
-- **Engine:** an AI model — **`RandomForestRegressor`** predicting a continuous irrigation
-  **suitability score in [0, 1]** — trained on synthetic, agronomy-grounded data now, retrainable on
-  real hut logs later.
-- **Hardware:** none yet. Synthetic sensor now; real DHT22/SHT31-on-Raspberry-Pi drop-in later behind
+- **Outputs:** (a) the **identified optimum** temp/RH per stage (from the model); (b) real-time
+  `irrigate now / wait`; (c) recommended daily irrigation **time-of-day window** (e.g. "06:30–08:00").
+- **Engine:** **`RandomForestRegressor`** predicting a continuous **growth-quality score (0–1)** from
+  `(temp, rh, stage)`, trained on synthetic data labeled from the §3 response surface. Optimum and
+  irrigation timing are derived from the model.
+- **Hardware:** none yet — `SyntheticSensor` now; real DHT22/SHT31-on-Raspberry-Pi drop-in later behind
   the same interface.
-- **Footprint:** runs on a Raspberry Pi; small dependency set; trained model persisted as a small
-  pickle.
-- **Safety:** hard agronomic guardrails wrap the model output (below).
+- **Footprint:** runs on a Raspberry Pi; small dependency set; model persisted as a small pickle.
+- **Safety:** hard agronomic guardrails wrap model output (§7).
 
-## 4. Architecture
+## 5. Architecture
 
 ```
-sensor source (abstracted)          ┌─ synthetic generator (now)
-   ├─ SyntheticSensor  ─────────────┘
+sensor source (abstracted)          ┌─ synthetic climate generator (now)
+   ├─ SyntheticSensor  ─────────────┘   (Binh Duong diurnal temp/RH)
    └─ RealSensor (DHT22/SHT31)  ── future drop-in
             │
        data logger ──► storage (SQLite, stdlib)
             │
-   feature builder (hour, temp, RH, stage, RH drying-trend)
+   ┌─────────────────────────────────────────────┐
+   │ growth-response dataset (synthetic, §3)      │ → trains
+   │   (temp, rh, stage) → growth-quality label   │
+   └─────────────────────────────────────────────┘
             │
-   AI model (RandomForestRegressor → suitability score 0..1)
-        trained on synthetic labels from cited agronomy
+   AI model: RandomForestRegressor → growth quality 0..1
             │
-   decision layer  ┌─ real-time:  irrigate-now / wait
-                   └─ daily window: argmax suitability across the day
+   ┌─ optimum(stage):  argmax growth over temp×RH grid
+   │
+   decision layer
+   ├─ real-time:  does watering raise predicted growth? → irrigate / wait
+   └─ daily window: per-hour predicted growth gain from watering → best window
             │
-   safety guardrails (never water mature; RH/temp clamps; drying rule)
+   safety guardrails (never water mature; RH≤95% cap; temp clamp; drying rule)
             │
    outputs: CLI report + JSON  (dashboard/actuator consume later)
 ```
 
-Each unit has one purpose, a defined interface, and is testable in isolation.
+Two **separate** synthetic sources: a **climate generator** (diurnal time-series for timing + logging)
+and a **growth-response dataset** (samples across temp×RH×stage labeled by the §3 surface) for training
+the model. Each unit has one purpose, a defined interface, and is independently testable.
 
-## 5. Components
+## 6. Components
 
 | Module | Responsibility | Key interface |
 |--------|----------------|---------------|
-| `config/oyster.yaml` | Per-stage target temp/RH bands, drying swing, guardrail limits. Editable per species. | data file |
+| `config/oyster.yaml` | Per-stage temp/RH optima & penalties, guardrail limits, watering effect (ΔRH/Δtemp). Editable per strain. | data file |
 | `sensors/base.py` | `SensorSource` abstract interface | `read() -> Reading(temp, rh, ts)` |
-| `sensors/synthetic.py` | Binh Duong tropical diurnal curves (temp peak ~14:00; RH peak pre-dawn; noise; watering effect) | implements `SensorSource` |
-| `sensors/real.py` | Raspberry-Pi sensor stub (documented, not wired) | implements `SensorSource` |
-| `data/synthetic.py` | Generate labeled training set: features `(hour, temp, rh, stage)` → suitability label from §2 rules | `make_dataset(n) -> (X, y)` |
-| `model/train.py` | Fit & persist `RandomForestRegressor`; report metrics | `train()`, saves `model.pkl` |
-| `model/predict.py` | Load model; score suitability | `predict_suitability(features) -> float` |
-| `features.py` | Build feature vector incl. RH drying-trend | `build_features(...)` |
-| `decision.py` | Real-time decision + daily-window scan, then guardrails | `decide_now(...)`, `best_window(...)` |
+| `sensors/synthetic.py` | Binh Duong diurnal climate (temp peak ~14:00; RH peak pre-dawn; noise; watering effect) | implements `SensorSource` |
+| `sensors/real.py` | Raspberry-Pi DHT22/SHT31 stub (documented, not wired) | implements `SensorSource` |
+| `growth/response.py` | The §3 response surface → growth-quality label | `growth_quality(temp, rh, stage) -> float` |
+| `data/synthetic.py` | Sample `(temp, rh, stage)` space, label via `growth/response.py`, add noise | `make_dataset(n) -> (X, y)` |
+| `model/train.py` | Fit & persist `RandomForestRegressor`; report R²/MAE | `train()`, saves `model.pkl` |
+| `model/predict.py` | Load model; predict growth; `optimum(stage)` via grid argmax | `predict(...)`, `optimum(stage)` |
+| `decision.py` | Real-time decision + daily-window scan from predicted growth gain, then guardrails | `decide_now(...)`, `best_window(...)` |
 | `store.py` | SQLite logging of readings + decisions; diurnal queries | `log_reading`, `log_decision`, `daily_profile` |
-| `cli.py` | Train, simulate a day, print best window + live decisions; optional matplotlib chart (dev-only) | entry point |
-| `tests/` | generator, labeling, guardrails, window selection | pytest |
-
-## 6. Growth-stage interface (CV integration)
-
-`growth_stage` is a feature passed in as an enum (`none` / `small_medium` / `mature`). Until the YOLO
-model is wired in, it is supplied manually or by the simulator. Mapping to agronomy:
-
-- `none` → colonization rules (minimal/no surface irrigation)
-- `small_medium` → pinning/fruiting rules (irrigation matters most here)
-- `mature` → hold (never irrigate — guardrail)
+| `cli.py` | Train, print identified optima, simulate a day, print best window + live decisions; optional matplotlib chart (dev-only) | entry point |
+| `tests/` | response surface, dataset, optimum, guardrails, window selection | pytest |
 
 ## 7. Decision logic
 
-- **Real-time** (`decide_now`): build features from current reading + stage, get model suitability,
-  apply guardrails, return `{irrigate: bool, score, reason}`.
-- **Daily window** (`best_window`): score each time bin (hourly) of a representative day for the active
-  stage; the recommended window is the contiguous run of highest-suitability bins (argmax + threshold).
+- **Identified optimum** (`optimum(stage)`): grid-search the model over temp×RH → the (T\*, RH\*) that
+  maximise predicted growth. This is the model's core "find the optimum" output.
+- **Real-time** (`decide_now`): from the current reading + stage, estimate predicted-growth gain of
+  watering (apply config ΔRH/Δtemp, compare model growth before vs after). Irrigate if gain is positive
+  **and** guardrails pass; else wait. Returns `{irrigate, growth_gain, reason}`.
+- **Daily window** (`best_window`): over a representative diurnal profile for the active stage, compute
+  the predicted-growth gain of watering at each hour; the recommended window is the contiguous run of
+  highest-gain hours that also satisfy the drying rule.
 - **Guardrails (override the model, always):**
   1. `stage == mature` → never irrigate.
-  2. current RH ≥ stage upper band → wait (already wet; avoid blotch).
+  2. watering would push RH > 95 % → wait (blotch risk).
   3. temp outside safe band → wait.
-  4. predicted post-watering drying inadequate (near daily humidity peak) → wait.
+  4. inadequate post-watering drying (near daily humidity peak) → wait.
 
-Guardrails guarantee safe behaviour even if the model is wrong.
+## 8. Synthetic data
 
-## 8. Synthetic data & labeling
+- **Climate generator** (`sensors/synthetic.py`): tropical Binh Duong diurnal series — temperature
+  sinusoid (min pre-dawn ~24 °C, max ~14:00 ~33 °C), RH inversely correlated (max pre-dawn ~95 %, min
+  mid-afternoon ~60 %), Gaussian noise, day-to-day variation, watering bumps RH / dips temp.
+- **Growth-response dataset** (`data/synthetic.py`): sample `(temp, rh, stage)` across realistic ranges,
+  label with `growth_quality` from the §3 peaked surface, add noise so the model must generalise. This
+  is the training set the RandomForestRegressor learns the optimum from.
 
-`SyntheticSensor` produces realistic tropical (Binh Duong) time-series: temperature diurnal sinusoid
-(min pre-dawn ~24 °C, max ~14:00 ~33 °C), humidity inversely correlated (max pre-dawn ~95 %, min
-mid-afternoon ~60 %), plus Gaussian noise and day-to-day variation. The training label (suitability
-0..1) is computed from the §2 rules: high when stage allows watering **and** RH is below the target
-band **and** the following hours permit cap drying; ~0 for mature or already-wet conditions. The model
-thus learns a smooth version of the agronomy and handles noise/interpolation.
+## 9. Dependencies (Pi-light)
 
-## 9. Dependencies
-
-`scikit-learn`, `numpy` (core); `PyYAML` (config); SQLite via stdlib; `matplotlib` optional/dev-only
-(not required on the Pi). Pinned in `requirements.txt`. All run on Raspberry Pi OS.
+`scikit-learn`, `numpy` (core); `PyYAML` (config); SQLite via stdlib; `matplotlib` optional/dev-only.
+Pinned in `requirements.txt`. All run on Raspberry Pi OS.
 
 ## 10. Testing & evaluation
 
-- Unit tests: synthetic generator shape/ranges; labeling rules; **guardrail test asserting mature →
-  never water**; window selection on a known profile.
-- Model evaluation: R² / MAE of suitability regression vs held-out synthetic labels, reported by
-  `model/train.py` (parallels the YOLO precision/recall slide).
+- Unit tests: response surface monotonicity/penalties; dataset shape/ranges; `optimum()` lands in the
+  cited bands; **guardrail test asserting mature → never water**; window selection on a known profile.
+- Model evaluation: R²/MAE of growth regression on held-out synthetic data, plus a check that the
+  model's identified optimum matches the literature bands (parallels the YOLO precision/recall metrics).
 
-## 11. Honest tradeoff / scope
+## 11. Honest scope note
 
-Because synthetic labels come from the cited rules, the model today largely **reproduces those rules**
-plus noise tolerance — it is not discovering new agronomy. Its value is the **trainable, swappable
-pipeline**: replace `SyntheticSensor` with `RealSensor`, accumulate real hut logs + watering outcomes,
-and retrain on real data with **no architectural change**. Guardrails keep behaviour safe throughout.
+Because the labels come from a literature-derived response surface, the model's accuracy is bounded by
+that literature until **real farm yield/sensor data** replaces it — at which point the same pipeline
+retrains with no architectural change. This is reduced circularity vs hand-labeling an irrigation rule:
+the model learns a biological growth response and *finds* the optimum itself, rather than echoing a
+heuristic. Guardrails keep behaviour safe throughout.
 
 ## 12. Out of scope (YAGNI)
 
 - Real firmware / GPIO wiring (documented stub only).
 - The app dashboard UI and the physical actuator/pump control (this feature emits JSON they consume).
-- GC-style multi-species tuning beyond the editable config.
-- The statistical/learned-window-from-real-history upgrade (enabled by, but not built in, this spec).
+- Multi-species support beyond the editable oyster config.
+- The statistical/learned-window-from-real-history upgrade (enabled by, not built in, this spec).

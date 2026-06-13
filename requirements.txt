@@ -1,0 +1,5 @@
+scikit-learn>=1.3
+numpy>=1.24
+PyYAML>=6.0
+matplotlib>=3.7   ; optional, dev/visualisation only
+pytest>=7.4       ; dev only

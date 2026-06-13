@@ -1,0 +1,44 @@
+# Tropical oyster (Pleurotus florida / pulmonarius) — Binh Duong, Vietnam.
+# Ranges literature-seeded (see spec §3); edit to match the farm's strain.
+species: oyster_tropical
+
+stages:
+  none:            # colonization / spawn run — no surface irrigation
+    temp_opt: 27.0
+    temp_min: 25.0
+    temp_max: 30.0
+    rh_opt: 72.5
+    rh_min: 70.0
+    rh_max: 75.0
+    irrigate: false
+  small_medium:    # pinning + fruiting — irrigation matters here
+    temp_opt: 23.0
+    temp_min: 20.0
+    temp_max: 28.0
+    rh_opt: 90.0
+    rh_min: 85.0
+    rh_max: 95.0
+    irrigate: true
+  mature:          # harvest-ready — never water (spoilage)
+    irrigate: false
+
+guardrails:
+  rh_hard_max: 95.0      # never let watering push RH above this (blotch/mould)
+  temp_stress: 30.0      # above this = thermal stress
+  rh_desiccation: 75.0   # below this (fruiting) = desiccation
+
+watering_effect:
+  delta_rh: 8.0          # one watering raises RH ~8 percentage points
+  delta_temp: -1.0       # and cools slightly
+
+# Daytime hours during which a watered cap can dry (warmth + ventilation)
+# before the near-saturated, still night. Surface-drying guardrail uses this.
+drying_window: [8, 15]
+
+climate:                 # Binh Duong tropical diurnal (synthetic sensor)
+  temp_min: 24.0
+  temp_max: 33.0
+  temp_peak_hour: 14
+  rh_min: 60.0
+  rh_max: 95.0
+  rh_peak_hour: 5

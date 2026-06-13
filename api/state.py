@@ -7,6 +7,7 @@ from irrigation_timing.config import load_config
 from irrigation_timing.model.predict import load_model
 from irrigation_timing.model.train import MODEL_PATH, train
 from irrigation_timing.sensors.synthetic import SyntheticSensor
+from api.camera.mock import MockCamera
 
 
 class AppState:
@@ -39,6 +40,12 @@ class AppState:
         if self._sensor is None:
             self._sensor = SyntheticSensor(self.config)
         return self._sensor
+
+    @property
+    def camera(self):
+        if self._camera is None:
+            self._camera = MockCamera(n_shelves=3)
+        return self._camera
 
     @property
     def model_loaded(self) -> bool:

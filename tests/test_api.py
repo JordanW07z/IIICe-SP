@@ -36,3 +36,18 @@ def test_mock_camera_is_deterministic_with_seed():
     a = MockCamera(n_shelves=4, seed=7).frames()
     b = MockCamera(n_shelves=4, seed=7).frames()
     assert [(f.stage, f.detections) for f in a] == [(f.stage, f.detections) for f in b]
+
+
+def test_live_payload_shape():
+    r = client.get("/api/live")
+    assert r.status_code == 200
+    body = r.json()
+    assert set(body) >= {"timestamp", "ambient", "shelves", "model_metrics"}
+    assert body["model_metrics"] == {"precision": 0.973, "recall": 0.613, "accuracy": 0.885}
+    assert body["ambient"]["temp"] >= 0 and 0 <= body["ambient"]["rh"] <= 100
+    assert len(body["shelves"]) == 3
+    shelf = body["shelves"][0]
+    assert set(shelf) >= {"id", "stage", "temp", "rh", "detections"}
+    for d in shelf["detections"]:
+        assert set(d) >= {"box", "label", "stage", "confidence"}
+        assert len(d["box"]) == 4

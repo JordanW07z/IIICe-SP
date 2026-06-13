@@ -17,7 +17,7 @@ class Detection:
 class ShelfFrame:
     id: int
     stage: str
-    detections: List[Detection]
+    detections: Tuple[Detection, ...]   # tuple keeps the frozen dataclass truly immutable
 
 
 class CameraSource(ABC):

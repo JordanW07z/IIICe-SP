@@ -7,6 +7,7 @@ from irrigation_timing.config import load_config
 from irrigation_timing.model.predict import load_model
 from irrigation_timing.model.train import MODEL_PATH, train
 from irrigation_timing.sensors.synthetic import SyntheticSensor
+from api.camera.base import CameraSource
 from api.camera.mock import MockCamera
 
 
@@ -19,7 +20,7 @@ class AppState:
         self._config: Optional[dict] = None
         self._model = None
         self._sensor: Optional[SyntheticSensor] = None
-        self._camera = None
+        self._camera: Optional[CameraSource] = None
 
     @property
     def config(self) -> dict:
@@ -42,7 +43,7 @@ class AppState:
         return self._sensor
 
     @property
-    def camera(self):
+    def camera(self) -> CameraSource:
         if self._camera is None:
             self._camera = MockCamera(n_shelves=3)
         return self._camera

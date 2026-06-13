@@ -13,6 +13,8 @@ def _guardrails(temp: float, rh: float, stage: Stage, config: dict) -> Tuple[boo
         return True, "mature: never irrigate (overwatering causes spoilage)"
     if not config["stages"].get(stage.value, {}).get("irrigate", False):
         return True, f"stage {stage.value}: surface irrigation not required"
+    if temp > g["temp_stress"]:
+        return True, "temperature above safe band (thermal stress); wait for cooler conditions"
     if rh + config["watering_effect"]["delta_rh"] > g["rh_hard_max"]:
         return True, "watering would push RH above safe max (blotch risk)"
     return False, ""

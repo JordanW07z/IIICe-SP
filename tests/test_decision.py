@@ -63,3 +63,11 @@ def test_best_window_none_for_mature(tmp_path):
     profile = [(h, t, r) for h, (t, r) in enumerate(diurnal_profile(CFG))]
     win = best_window(model, Stage.MATURE, profile, CFG)
     assert win["window"] is None
+
+
+def test_thermal_stress_blocks_irrigation(tmp_path):
+    model = _model(tmp_path)
+    # 34 C is above guardrails.temp_stress (30) -> veto regardless of RH/hour
+    d = decide_now(model, 34.0, 85.0, Stage.SMALL_MEDIUM, CFG, hour=10)
+    assert d["irrigate"] is False
+    assert "temp" in d["reason"].lower() or "stress" in d["reason"].lower()

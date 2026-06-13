@@ -30,8 +30,8 @@ def growth_quality(temp: float, rh: float, stage: Union[str, Stage], config: dic
 
     g = config["guardrails"]
     if temp > g["temp_stress"]:
-        quality *= 0.3   # thermal stress: malformed bodies, low BE
+        quality *= g["temp_stress_penalty"]   # thermal stress: malformed bodies, low BE
     if rh > g["rh_hard_max"]:
-        quality *= 0.4   # over-saturation: blotch/mould risk
+        quality *= g["rh_oversaturation_penalty"]   # over-saturation: blotch/mould risk
 
     return max(0.0, min(1.0, quality))

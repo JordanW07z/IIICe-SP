@@ -24,6 +24,7 @@ def climate_at(hour: float, config: dict, noise_rng: Optional[np.random.Generato
     if noise_rng is not None:
         temp += noise_rng.normal(0.0, 0.5)
         rh += noise_rng.normal(0.0, 1.5)
+    temp = max(0.0, min(50.0, temp))
     return temp, max(0.0, min(100.0, rh))
 
 

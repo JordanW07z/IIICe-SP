@@ -26,6 +26,8 @@ guardrails:
   rh_hard_max: 95.0      # never let watering push RH above this (blotch/mould)
   temp_stress: 30.0      # above this = thermal stress
   rh_desiccation: 75.0   # below this (fruiting) = desiccation
+  temp_stress_penalty: 0.3        # growth multiplier when temp > temp_stress
+  rh_oversaturation_penalty: 0.4  # growth multiplier when rh > rh_hard_max
 
 watering_effect:
   delta_rh: 8.0          # one watering raises RH ~8 percentage points

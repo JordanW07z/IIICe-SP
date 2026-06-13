@@ -30,3 +30,14 @@ def test_quality_bounded_unit_interval():
         for r in (55, 90, 100):
             q = growth_quality(t, r, Stage.SMALL_MEDIUM, CFG)
             assert 0.0 <= q <= 1.0
+
+
+def test_penalties_are_config_driven():
+    cfg = load_config()
+    hot = growth_quality(34.0, 90.0, Stage.SMALL_MEDIUM, cfg)
+    # zeroing the penalty in a copied config should raise the hot-condition quality
+    import copy
+    cfg2 = copy.deepcopy(cfg)
+    cfg2["guardrails"]["temp_stress_penalty"] = 1.0
+    hot_no_penalty = growth_quality(34.0, 90.0, Stage.SMALL_MEDIUM, cfg2)
+    assert hot_no_penalty > hot

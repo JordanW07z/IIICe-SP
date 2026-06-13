@@ -11,6 +11,11 @@ from ..types import Stage
 
 
 def load_model(model_path: Union[str, Path]):
+    model_path = Path(model_path)
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {model_path}. Run `python -m irrigation_timing.cli train` first."
+        )
     with open(model_path, "rb") as fh:
         return pickle.load(fh)
 

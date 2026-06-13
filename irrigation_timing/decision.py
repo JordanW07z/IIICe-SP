@@ -9,6 +9,7 @@ from .types import Stage
 def _guardrails(temp: float, rh: float, stage: Stage, config: dict) -> Tuple[bool, str]:
     """Return (blocked, reason). Guardrails override the model — spec §7."""
     g = config["guardrails"]
+    # Explicit MATURE check gives a clearer reason than the generic irrigate=false path below.
     if stage == Stage.MATURE:
         return True, "mature: never irrigate (overwatering causes spoilage)"
     if not config["stages"].get(stage.value, {}).get("irrigate", False):
@@ -70,7 +71,11 @@ def best_window(
     config: dict,
 ) -> dict:
     """Scan a (hour, temp, rh) diurnal profile; return the contiguous run of
-    irrigate-now hours with the greatest total predicted growth gain."""
+    irrigate-now hours with the greatest total predicted growth gain.
+
+    The returned ``window`` is ``(start_hour_inclusive, end_hour_exclusive)``.
+    The ``hours`` list is the explicit set of recommended hours within that window.
+    """
     stage = Stage.from_str(stage) if isinstance(stage, str) else stage
 
     runs: List[List[Tuple[float, float]]] = []

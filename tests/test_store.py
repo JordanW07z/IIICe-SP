@@ -10,6 +10,9 @@ def test_log_and_read_back_reading():
     profile = store.daily_profile()
     hours = {h for h, _, _ in profile}
     assert 7 in hours and 14 in hours
+    by_hour = {h: (t, r) for h, t, r in profile}
+    assert by_hour[7][0] == 24.0
+    assert by_hour[14][0] == 31.0
     store.close()
 
 

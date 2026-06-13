@@ -51,3 +51,34 @@ def test_live_payload_shape():
     for d in shelf["detections"]:
         assert set(d) >= {"box", "label", "stage", "confidence"}
         assert len(d["box"]) == 4
+
+
+def test_config_returns_bands():
+    r = client.get("/api/config")
+    assert r.status_code == 200
+    cfg = r.json()
+    sm = cfg["stages"]["small_medium"]
+    assert sm["rh_min"] == 85.0 and sm["rh_max"] == 95.0
+
+
+def test_timing_matches_module_shape():
+    r = client.get("/api/timing", params={"stage": "small_medium"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["stage"] == "small_medium"
+    assert set(body) >= {"stage", "optimum", "best_window", "now", "live"}
+    assert set(body["optimum"]) >= {"temp", "rh", "growth"}
+    assert set(body["live"]) >= {"irrigate", "growth_gain", "reason"}
+    assert set(body["best_window"]) >= {"window", "hours", "total_gain"}
+
+
+def test_timing_mature_never_irrigates():
+    r = client.get("/api/timing", params={"stage": "mature"})
+    body = r.json()
+    assert body["live"]["irrigate"] is False
+    assert "mature" in body["live"]["reason"].lower()
+
+
+def test_timing_rejects_unknown_stage():
+    r = client.get("/api/timing", params={"stage": "banana"})
+    assert r.status_code == 400

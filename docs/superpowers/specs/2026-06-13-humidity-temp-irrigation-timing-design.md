@@ -52,9 +52,14 @@ near the stage's temperature optimum and RH ≈ 90 %, penalised for **>30 °C** 
 bodies), **>95 % RH** (blotch/mould), and **<75 % RH** (desiccation). *P. florida* is noted as more
 sensitive to RH fluctuation than *P. ostreatus*.
 
-**Timing rule (blotch guardrail):** disease is probable whenever cap surfaces stay wet after watering,
-so the best irrigation window lets surfaces dry afterward — not the peak-humidity cooling evening that
-keeps caps wet overnight.
+**Timing rule (blotch guardrail) — surface drying, NOT a dry room:** Bacterial blotch
+(*Pseudomonas tolaasii*) is driven by a *persistent film of free water on the cap surface*, not by
+ambient air humidity. Ambient RH must stay **high (85–90 %)** for the mushrooms; the guardrail only
+ensures the **surface droplets from a watering evaporate within a few hours**, via airflow/ventilation
+and the natural mid-day RH dip. The lever is **timing**, not desiccation: watering late morning lets
+the cap film dry before the near-saturated, still night; evening watering leaves it wet overnight →
+blotch. The "≥10 % drying swing" stays *within* the safe band (≈95 % → 85 %), so the air is never dried
+below the mushroom-healthy range. The guardrail never lowers ambient humidity below the §3 targets.
 
 Sources:
 - [IJRRR 2018 — Influence of Temperature & RH on fruiting body production of *Pleurotus florida*](https://www.ijrrr.com/papers11-1/paper16-Influence%20on%20Temperature%20and%20Relative%20Humidity%20on%20Fruiting%20Body%20Production%20of%20Pleurotus%20Florida%20_Oyster%20Mushrooms_%20in%20the%20Cropping%20Room.pdf) — RH→yield peak ~90 %, fruiting 20–28 °C, spawn 25–30 °C/70–75 %, >30 °C stress
@@ -143,7 +148,9 @@ the model. Each unit has one purpose, a defined interface, and is independently 
   1. `stage == mature` → never irrigate.
   2. watering would push RH > 95 % → wait (blotch risk).
   3. temp outside safe band → wait.
-  4. inadequate post-watering drying (near daily humidity peak) → wait.
+  4. inadequate post-watering **surface** drying — would the cap film evaporate within a few hours?
+     (avoid watering near the daily humidity peak / before the still night) → wait. Ambient RH is never
+     pushed below the §3 healthy band.
 
 ## 8. Synthetic data
 

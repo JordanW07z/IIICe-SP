@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>SpotShrooms — IIICE Poster (A1)</title>
+<style>
+  /* A1 portrait = 594 x 841 mm. Open in a browser, then Ctrl/Cmd+P -> Save as PDF
+     (paper A1, no margins, Background graphics ON) -> upload that PDF to Canva. */
+  @page { size: 594mm 841mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --green:#1b5e20; --green2:#2e7d32; --accent:#43a047; --leaf:#66bb6a;
+    --ink:#15231a; --muted:#5b6b60; --line:#d9e4dc; --bg:#ffffff; --soft:#f1f7f2;
+    --water:#2e7d32; --dont:#c62828;
+  }
+  html,body{ background:#7d8b80; }
+  .poster{
+    width:594mm; height:841mm; background:var(--bg); color:var(--ink);
+    margin:0 auto; position:relative; overflow:hidden;
+    font-family:"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    display:flex; flex-direction:column;
+  }
+  /* ---------- header ---------- */
+  .head{ background:linear-gradient(135deg,var(--green) 0%, var(--green2) 70%, var(--accent) 100%);
+    color:#fff; padding:26mm 24mm 18mm; position:relative; }
+  .head .kicker{ font-size:11mm; letter-spacing:2mm; text-transform:uppercase; opacity:.85; font-weight:600; }
+  .head h1{ font-size:46mm; line-height:.98; font-weight:800; margin:3mm 0 2mm; letter-spacing:-.5mm; }
+  .head .tag{ font-size:13mm; font-weight:400; opacity:.95; }
+  .badges{ position:absolute; top:24mm; right:24mm; display:flex; gap:5mm; }
+  .sdg{ width:34mm; height:34mm; border-radius:6mm; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; color:#fff; font-weight:800; box-shadow:0 2mm 6mm rgba(0,0,0,.18); }
+  .sdg small{ font-size:5mm; font-weight:700; letter-spacing:.4mm; opacity:.95; }
+  .sdg b{ font-size:15mm; line-height:1; }
+  .sdg9{ background:#e5243b; } .sdg12{ background:#bf8b2e; }
+  .subtheme{ position:absolute; bottom:7mm; right:24mm; font-size:8.5mm; font-weight:700;
+    background:rgba(255,255,255,.16); padding:3mm 6mm; border-radius:30mm; }
+
+  .body{ flex:1; padding:16mm 24mm 0; display:flex; flex-direction:column; gap:13mm; }
+  h2{ font-size:15mm; color:var(--green); font-weight:800; letter-spacing:.3mm;
+    display:flex; align-items:center; gap:5mm; }
+  h2::before{ content:""; width:7mm; height:7mm; background:var(--accent); border-radius:2mm; display:inline-block; }
+  p,li{ font-size:9.5mm; line-height:1.32; color:var(--ink); }
+  .muted{ color:var(--muted); }
+
+  /* ---------- problem ---------- */
+  .problem{ display:flex; gap:14mm; align-items:stretch; }
+  .problem .stat{ flex:0 0 150mm; background:var(--soft); border:1.5mm solid var(--line);
+    border-radius:8mm; padding:12mm; display:flex; flex-direction:column; justify-content:center; }
+  .problem .stat b{ font-size:40mm; color:var(--dont); font-weight:800; line-height:.95; }
+  .problem .stat span{ font-size:9mm; color:var(--muted); margin-top:3mm; }
+  .problem .txt{ flex:1; display:flex; flex-direction:column; justify-content:center; }
+
+  /* ---------- pipeline ---------- */
+  .pipe{ width:100%; }
+  .flow{ display:flex; align-items:stretch; gap:0; margin-top:3mm; }
+  .step{ flex:1; background:#fff; border:1.5mm solid var(--line); border-radius:7mm; padding:8mm 6mm;
+    text-align:center; position:relative; }
+  .step .ic{ font-size:18mm; line-height:1; }
+  .step .t{ font-size:8.5mm; font-weight:800; color:var(--green); margin:3mm 0 1.5mm; }
+  .step .d{ font-size:7mm; color:var(--muted); line-height:1.25; }
+  .arrow{ display:flex; align-items:center; justify-content:center; width:14mm; color:var(--accent); font-size:16mm; font-weight:800; }
+  .dual{ margin-top:4mm; font-size:8.5mm; color:var(--muted); text-align:center; }
+  .dual b{ color:var(--green2); }
+
+  /* ---------- results ---------- */
+  .cards{ display:flex; gap:10mm; }
+  .card{ flex:1; border:1.5mm solid var(--line); border-radius:8mm; overflow:hidden; }
+  .card .cap{ background:var(--green); color:#fff; font-size:9mm; font-weight:800; padding:5mm 7mm; }
+  .card .met{ display:flex; }
+  .met .m{ flex:1; padding:8mm 4mm; text-align:center; border-right:1mm solid var(--line); }
+  .met .m:last-child{ border-right:0; }
+  .met .m b{ display:block; font-size:20mm; color:var(--green2); font-weight:800; line-height:1; }
+  .met .m span{ font-size:6.5mm; color:var(--muted); text-transform:uppercase; letter-spacing:.4mm; }
+  .note{ font-size:7.5mm; color:var(--muted); margin-top:3mm; }
+
+  /* ---------- two-up impact + feasibility ---------- */
+  .twoup{ display:flex; gap:14mm; }
+  .twoup > div{ flex:1; }
+  ul{ margin-left:9mm; } li{ margin-bottom:2.5mm; }
+  .pill{ display:inline-block; background:var(--soft); border:1mm solid var(--line);
+    border-radius:30mm; padding:2.5mm 6mm; font-size:8mm; font-weight:700; color:var(--green); margin:0 3mm 3mm 0; }
+
+  /* ---------- footer ---------- */
+  .foot{ margin-top:auto; background:var(--green); color:#fff; padding:11mm 24mm; display:flex;
+    justify-content:space-between; align-items:center; }
+  .foot .team b{ font-size:9.5mm; font-weight:800; letter-spacing:.3mm; }
+  .foot .team div{ font-size:8mm; opacity:.92; margin-top:2mm; }
+  .foot .who{ font-size:8.5mm; font-weight:700; text-align:right; opacity:.95; }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <header class="head">
+    <div class="kicker">Singapore Polytechnic · Agri-Tech Innovation</div>
+    <h1>SpotShrooms</h1>
+    <div class="tag">Eyes on every mushroom, anytime, anywhere.</div>
+    <div class="badges">
+      <div class="sdg sdg9"><small>SDG</small><b>9</b></div>
+      <div class="sdg sdg12"><small>SDG</small><b>12</b></div>
+    </div>
+    <div class="subtheme">Agriculture &amp; Environmental</div>
+  </header>
+
+  <main class="body">
+
+    <section class="problem">
+      <div class="stat">
+        <b>20–30%</b>
+        <span>of mushrooms lost every year to <strong>overwatering</strong> &amp; spoilage</span>
+      </div>
+      <div class="txt">
+        <h2>The Problem</h2>
+        <p>Across Asia, mushroom farms still rely on <strong>manual monitoring</strong>. Workers
+        cannot watch every shelf around the clock, so mature mushrooms get over-watered and rot —
+        a severe, avoidable harvest loss for smallholder farms in Binh Duong, Vietnam.</p>
+      </div>
+    </section>
+
+    <section class="pipe">
+      <h2>Our Solution — a self-driving watering system</h2>
+      <div class="flow">
+        <div class="step"><div class="ic">📷</div><div class="t">AI Camera</div>
+          <div class="d">160° camera on a moving rod scans each shelf</div></div>
+        <div class="arrow">›</div>
+        <div class="step"><div class="ic">🧠</div><div class="t">YOLOv8 Vision</div>
+          <div class="d">Detects growth stage — decides <b>whether</b> to water</div></div>
+        <div class="arrow">›</div>
+        <div class="step"><div class="ic">🌡️</div><div class="t">Climate AI</div>
+          <div class="d">Temp + humidity model decides <b>when</b> to water</div></div>
+        <div class="arrow">›</div>
+        <div class="step"><div class="ic">💧</div><div class="t">Auto Irrigation</div>
+          <div class="d">IoT valve waters only when it helps</div></div>
+        <div class="arrow">›</div>
+        <div class="step"><div class="ic">📊</div><div class="t">Dashboard</div>
+          <div class="d">Live monitoring &amp; timing for the farmer</div></div>
+      </div>
+      <div class="dual">Two cooperating AI models: a <b>vision model</b> (what is on the shelf) and a
+        <b>climate model</b> (the right moment to water) — with hard safety guardrails.</div>
+    </section>
+
+    <section>
+      <h2>Results — measured, not promised</h2>
+      <div class="cards">
+        <div class="card">
+          <div class="cap">AI Camera · YOLOv8 detection</div>
+          <div class="met">
+            <div class="m"><b>0.973</b><span>Precision</span></div>
+            <div class="m"><b>0.885</b><span>Accuracy</span></div>
+            <div class="m"><b>0.613</b><span>Recall</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="cap">Climate / Irrigation-Timing AI</div>
+          <div class="met">
+            <div class="m"><b>0.989</b><span>R² fit</span></div>
+            <div class="m"><b>0.976</b><span>Precision</span></div>
+            <div class="m"><b>0.951</b><span>Recall</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="note">Climate-AI metrics on a held-out test set (favourable-condition detection,
+        R² for growth-quality regression). A working web dashboard shows live detections, gauges and
+        irrigate-now / wait verdicts.</p>
+    </section>
+
+    <section class="twoup">
+      <div>
+        <h2>Impact</h2>
+        <ul>
+          <li>Cuts harvest loss from over-watering — more food from the same farm.</li>
+          <li><strong>SDG 12</strong>: water-efficient, responsible production.</li>
+          <li><strong>SDG 9</strong>: brings AI &amp; automation to agriculture.</li>
+          <li>Beginner-friendly — simple interface for non-technical farmers.</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Feasible &amp; Ready</h2>
+        <span class="pill">≈ 600 SGD to build</span>
+        <span class="pill">Runs on Raspberry Pi</span>
+        <span class="pill">Retrains on real farm data</span>
+        <p class="muted" style="margin-top:3mm">Low-cost hardware and a small software footprint make
+        SpotShrooms deployable on real smallholder farms today.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    <div class="team">
+      <b>Team SpotShrooms</b>
+      <div>Wui Soon Hiang Jordan (EEE) · Sean Ho Yan Xian (CLS) · Teo Xin Yin (SOC) · Pasu Chua (MAE)</div>
+    </div>
+    <div class="who">Co-Creating Tomorrow:<br/>Collaborative Innovations for Global Challenges</div>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -3,3 +3,8 @@ __pycache__/
 models/*.pkl
 *.db
 .pytest_cache/
+.venv/
+venv/
+node_modules/
+yolo_model/
+api/camera/weights/

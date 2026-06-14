@@ -1,0 +1,12 @@
+# Optional extras — REAL YOLOv8 detection in the dashboard (/api/detect upload panel).
+# Installable on Python 3.14 (resolves torch 2.12 + torchvision + opencv). ~2-3 GB download.
+#
+#   .venv\Scripts\python -m pip install -r requirements-yolo.txt
+#
+# Then drop your trained weights at api/camera/weights/best.pt (or set
+# SPOTSHROOMS_YOLO_WEIGHTS) and restart the backend — the "Run YOLOv8 on a photo"
+# panel goes live.
+-r requirements.txt
+ultralytics>=8.3      # pulls in torch + torchvision
+opencv-python>=4.10
+Pillow>=10.0

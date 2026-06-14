@@ -1,0 +1,23 @@
+# Full stack to TRAIN the models in the YOLO_Model_Code notebook
+# (Classification_Detection_Model.ipynb): the Keras CNN classifier AND the YOLOv8 detector.
+#
+# !! REQUIRES Python 3.10-3.13 — TensorFlow has NO wheels for Python 3.14 yet. !!
+# Create a SEPARATE venv with an older Python for this, e.g.:
+#
+#   py -3.12 -m venv .venv-notebook
+#   .venv-notebook\Scripts\python -m pip install -r requirements-notebook.txt
+#   .venv-notebook\Scripts\python -m jupyter lab
+#
+# (Or just run the notebook in Google Colab, which already has TF + GPU.)
+tensorflow>=2.15        # Keras grayscale water/dont-water classifier — Python <= 3.13
+ultralytics>=8.3        # YOLOv8 detector (torch + torchvision)
+opencv-python>=4.10
+Pillow>=10.0
+scikit-learn>=1.3
+numpy>=1.24
+pandas>=2.0
+matplotlib>=3.7
+seaborn>=0.13
+jupyterlab>=4.0
+ipython>=8.0
+# labelImg            # optional GUI for drawing YOLO bounding-box labels

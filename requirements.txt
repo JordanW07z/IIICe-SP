@@ -6,3 +6,7 @@ pytest>=7.4       # dev only
 fastapi==0.115.5
 uvicorn[standard]==0.32.1
 httpx==0.28.1
+python-multipart==0.0.12   # /api/detect file uploads
+# ultralytics            # OPTIONAL — install to enable real YOLOv8 detection (/api/detect).
+#                          Pulls in PyTorch (~2-3 GB). Then drop best.pt at
+#                          api/camera/weights/best.pt (or set SPOTSHROOMS_YOLO_WEIGHTS).

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from irrigation_timing.decision import best_window, decide_now
@@ -9,6 +9,7 @@ from irrigation_timing.sensors.synthetic import diurnal_profile
 from irrigation_timing.types import Stage
 
 from .state import state
+from .yolo import detector
 
 app = FastAPI(title="SpotShrooms Dashboard API")
 
@@ -78,3 +79,26 @@ def timing(stage: str = "small_medium") -> dict:
         "now": {"temp": round(reading.temp, 1), "rh": round(reading.rh, 1)},
         "live": decide_now(model, reading.temp, reading.rh, st, cfg, hour=reading.ts.hour),
     }
+
+
+@app.get("/api/detect/status")
+def detect_status() -> dict:
+    """Whether the real YOLOv8 model is live (weights present + ultralytics installed)."""
+    return {
+        "available": detector.available(),
+        "status": detector.status(),
+        "weights_path": str(detector.weights_path),
+    }
+
+
+@app.post("/api/detect")
+async def detect(file: UploadFile = File(...)) -> dict:
+    """Run the real YOLOv8 model on an uploaded photo and return water/don't-water boxes."""
+    if not detector.available():
+        raise HTTPException(status_code=503, detail=detector.status())
+    image_bytes = await file.read()
+    try:
+        dets = detector.detect(image_bytes)
+    except Exception as exc:  # malformed image, inference failure, etc.
+        raise HTTPException(status_code=500, detail=str(exc))
+    return {"detections": dets, "count": len(dets)}

@@ -3,6 +3,7 @@ import { usePolling } from "../usePolling.js";
 import { useEffect, useState } from "react";
 import CameraPanel from "../components/CameraPanel.jsx";
 import Gauge from "../components/Gauge.jsx";
+import DetectUpload from "../components/DetectUpload.jsx";
 
 export default function LiveMonitoring({ stage }) {
   const { data, error } = usePolling(getLive, 3000, []);
@@ -42,6 +43,7 @@ export default function LiveMonitoring({ stage }) {
           <p className="badge">Updated {data.timestamp}</p>
         </div>
       </div>
+      <DetectUpload />
     </div>
   );
 }

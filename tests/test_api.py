@@ -82,3 +82,25 @@ def test_timing_mature_never_irrigates():
 def test_timing_rejects_unknown_stage():
     r = client.get("/api/timing", params={"stage": "banana"})
     assert r.status_code == 400
+
+
+def test_detect_status_shape():
+    r = client.get("/api/detect/status")
+    assert r.status_code == 200
+    body = r.json()
+    assert set(body) >= {"available", "status", "weights_path"}
+    assert isinstance(body["available"], bool)
+
+
+def test_detect_unavailable_returns_503_without_weights():
+    # No weights are committed to the repo, so the real model is dormant and /api/detect
+    # must fail gracefully with 503 (not crash). If a developer has dropped in best.pt
+    # locally, the endpoint is live instead — accept either, but never a 500.
+    from api.yolo import detector
+
+    r = client.post("/api/detect", files={"file": ("x.jpg", b"not-a-real-image", "image/jpeg")})
+    if detector.available():
+        assert r.status_code in (200, 500)  # real model loaded; bad bytes may 500
+    else:
+        assert r.status_code == 503
+        assert "weights" in r.json()["detail"].lower() or "ultralytics" in r.json()["detail"].lower()

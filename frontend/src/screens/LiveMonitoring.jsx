@@ -20,7 +20,7 @@ export default function LiveMonitoring({ stage }) {
       <div className="row">
         <div className="card" style={{ flex: 2 }}>
           <h3>Camera — YOLO detection</h3>
-          <CameraCarousel shelves={data.shelves} />
+          <CameraCarousel ambient={data.ambient} />
           <p className="badge" style={{ marginTop: 12 }}>
             Model — Precision {m.precision} · Recall {m.recall} · Accuracy {m.accuracy}
           </p>

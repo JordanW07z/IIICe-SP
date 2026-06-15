@@ -98,6 +98,18 @@ def detect_status() -> dict:
 RESULTS_DIR = Path(os.environ.get("SPOTSHROOMS_RESULTS_DIR", "detection_results"))
 
 
+def _infer_stage(filename: str) -> str:
+    """Infer growth stage from filename. Falls back to 'unknown'."""
+    name = filename.lower()
+    if "mature" in name:
+        return "mature"
+    if "small" in name or "medium" in name or "small_medium" in name:
+        return "small_medium"
+    if "none" in name or "empty" in name:
+        return "none"
+    return "unknown"
+
+
 @app.get("/api/results")
 def results() -> dict:
     """Return all detection result images from the notebook as base64-encoded strings."""
@@ -108,7 +120,11 @@ def results() -> dict:
         for path in sorted(RESULTS_DIR.glob(ext)):
             data = base64.b64encode(path.read_bytes()).decode()
             mime = "image/png" if path.suffix == ".png" else "image/jpeg"
-            images.append({"name": path.name, "src": f"data:{mime};base64,{data}"})
+            images.append({
+                "name": path.name,
+                "src": f"data:{mime};base64,{data}",
+                "stage": _infer_stage(path.name),
+            })
     return {"images": images}
 
 

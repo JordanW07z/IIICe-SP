@@ -1,7 +1,7 @@
 import { getLive, getConfig } from "../api.js";
 import { usePolling } from "../usePolling.js";
 import { useEffect, useState } from "react";
-import CameraPanel from "../components/CameraPanel.jsx";
+import CameraCarousel from "../components/CameraCarousel.jsx";
 import Gauge from "../components/Gauge.jsx";
 import DetectUpload from "../components/DetectUpload.jsx";
 
@@ -20,16 +20,7 @@ export default function LiveMonitoring({ stage }) {
       <div className="row">
         <div className="card" style={{ flex: 2 }}>
           <h3>Camera — YOLO detection</h3>
-          <div className="row">
-            {data.shelves.map((s) => (
-              <div key={s.id} style={{ flex: 1, minWidth: 220 }}>
-                <CameraPanel shelf={s} />
-                <div className="badge" style={{ marginTop: 6 }}>
-                  {s.temp}°C · {s.rh}% RH
-                </div>
-              </div>
-            ))}
-          </div>
+          <CameraCarousel shelves={data.shelves} />
           <p className="badge" style={{ marginTop: 12 }}>
             Model — Precision {m.precision} · Recall {m.recall} · Accuracy {m.accuracy}
           </p>

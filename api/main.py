@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import base64
+import os
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -89,6 +93,23 @@ def detect_status() -> dict:
         "status": detector.status(),
         "weights_path": str(detector.weights_path),
     }
+
+
+RESULTS_DIR = Path(os.environ.get("SPOTSHROOMS_RESULTS_DIR", "detection_results"))
+
+
+@app.get("/api/results")
+def results() -> dict:
+    """Return all detection result images from the notebook as base64-encoded strings."""
+    if not RESULTS_DIR.exists():
+        return {"images": []}
+    images = []
+    for ext in ("*.jpg", "*.jpeg", "*.png"):
+        for path in sorted(RESULTS_DIR.glob(ext)):
+            data = base64.b64encode(path.read_bytes()).decode()
+            mime = "image/png" if path.suffix == ".png" else "image/jpeg"
+            images.append({"name": path.name, "src": f"data:{mime};base64,{data}"})
+    return {"images": images}
 
 
 @app.post("/api/detect")

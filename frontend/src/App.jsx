@@ -1,6 +1,7 @@
 import { useState } from "react";
 import LiveMonitoring from "./screens/LiveMonitoring.jsx";
 import IrrigationTiming from "./screens/IrrigationTiming.jsx";
+import DetectionResults from "./screens/DetectionResults.jsx";
 
 const STAGES = ["none", "small_medium", "mature"];
 
@@ -21,6 +22,8 @@ export default function App() {
             onClick={() => setTab("live")}>Live Monitoring</button>
           <button className={`tab ${tab === "timing" ? "active" : ""}`}
             onClick={() => setTab("timing")}>Irrigation Timing</button>
+          <button className={`tab ${tab === "results" ? "active" : ""}`}
+            onClick={() => setTab("results")}>Detection Results</button>
         </div>
         <label style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 13 }}>
           Stage&nbsp;
@@ -30,9 +33,9 @@ export default function App() {
         </label>
       </div>
 
-      {tab === "live"
-        ? <LiveMonitoring stage={stage} />
-        : <IrrigationTiming stage={stage} />}
+      {tab === "live" && <LiveMonitoring stage={stage} />}
+      {tab === "timing" && <IrrigationTiming stage={stage} />}
+      {tab === "results" && <DetectionResults />}
     </div>
   );
 }

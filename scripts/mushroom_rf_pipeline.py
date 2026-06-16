@@ -139,7 +139,7 @@ for i in range(N):
 
     # Veto conditions
     mature_ratio = mat / total if total > 0 else 0
-    if mature_ratio > 0.05:
+    if mature_ratio >= 0.05:
         base = 0
     if rh >= 92:
         base = 0
@@ -376,9 +376,9 @@ def predict(no_mushroom_sprout_count, small_medium_count, mature_count,
 
     mature_ratio = mature_count / total_count
 
-    # Veto: mature ratio > 5% — alert owner, do not mist
-    if mature_ratio > 0.05:
-        return 0, "ALERT: Mature ratio exceeded 5% — notify owner, skip cycle"
+    # Veto: mature ratio >= 5% — alert owner, do not mist
+    if mature_ratio >= 0.05:
+        return 0, "ALERT: Mature ratio reached 5% — notify owner, skip cycle"
 
     # Veto: humidity already saturated
     if rh_pct >= 92:
@@ -426,7 +426,7 @@ scenarios = [
     {
         "name": "E — Mixed, mature under 5%",
         "args": (1, 18, 1, 20, 79, 22, 1100),
-        "expected": "Moderate duration, RF runs normally",
+        "expected": "0 — mature ratio exactly 5%, veto triggered, notify owner",
     },
 ]
 

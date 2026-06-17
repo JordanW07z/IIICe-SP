@@ -435,9 +435,9 @@ export default function Home() {
   })();
 
   return (
-    <div className="h-dvh w-full bg-black text-zinc-100">
-      <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-zinc-950">
-        <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-3">
+    <div className="h-dvh w-full bg-emerald-950 text-zinc-100">
+      <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-emerald-950">
+        <header className="flex shrink-0 items-center justify-between border-b border-emerald-900 px-4 py-3">
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-emerald-400" />
             <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
@@ -456,7 +456,7 @@ export default function Home() {
           {activeTab === "monitor" && (
             <>
               {/* Camera feed */}
-              <section className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
+              <section className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
                 {/* faux video texture */}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.08),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -528,14 +528,14 @@ export default function Home() {
                       {sessionCounts[def.label] ?? 0}
                     </span>
                   ))}
-                  <span className="ml-1 border-l border-zinc-700 pl-1.5 text-[10px] font-medium text-zinc-300">
+                  <span className="ml-1 border-l border-emerald-800 pl-1.5 text-[10px] font-medium text-zinc-300">
                     {Object.values(sessionCounts).reduce((a, b) => a + b, 0)}{" "}
                     total
                   </span>
                 </div>
 
                 {/* corner reticles */}
-                <div className="pointer-events-none absolute inset-2 border border-zinc-700/30" />
+                <div className="pointer-events-none absolute inset-2 border border-emerald-800/30" />
               </section>
 
               {/* Sensor metrics */}
@@ -550,7 +550,7 @@ export default function Home() {
                   {metrics.map((metric) => (
                     <div
                       key={metric.id}
-                      className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3"
+                      className="rounded-lg border border-emerald-900 bg-emerald-900/20 p-3"
                     >
                       <div className="mb-1.5 flex items-center gap-1.5 text-zinc-500">
                         {metric.icon}
@@ -566,7 +566,7 @@ export default function Home() {
                           {metric.unit}
                         </span>
                       </div>
-                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-emerald-900">
                         <div
                           className="h-full rounded-full bg-sky-400 transition-all duration-700"
                           style={{
@@ -593,7 +593,7 @@ export default function Home() {
                   Irrigation Control
                 </h2>
               </div>
-              <div className="rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="rounded-lg border border-emerald-900 bg-emerald-900/20 p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-zinc-500">
                     <TreeDeciduous className="h-4 w-4" />
@@ -709,7 +709,7 @@ export default function Home() {
               </div>
 
               {/* Misted today */}
-              <div className="mt-3 flex-1 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="mt-3 flex-1 overflow-hidden rounded-lg border border-emerald-900 bg-emerald-900/20 p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-zinc-500">
                     <Clock className="h-4 w-4" />
@@ -737,7 +737,7 @@ export default function Home() {
 
                   return (
                     <>
-                      <ul className="mt-2 divide-y divide-zinc-800 border-t border-zinc-800">
+                      <ul className="mt-2 divide-y divide-emerald-900 border-t border-emerald-900">
                         {pageItems.length === 0 ? (
                           <li className="py-2 text-center text-[11px] text-zinc-500">
                             No mistings yet today
@@ -761,7 +761,7 @@ export default function Home() {
                       </ul>
 
                       {pageCount > 1 && (
-                        <div className="mt-2 flex items-center justify-between border-t border-zinc-800 pt-2">
+                        <div className="mt-2 flex items-center justify-between border-t border-emerald-900 pt-2">
                           <button
                             type="button"
                             onClick={() =>
@@ -805,7 +805,7 @@ export default function Home() {
                 </h2>
               </div>
 
-              <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-zinc-800 bg-zinc-900/60 px-2 py-2">
+              <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-emerald-900 bg-emerald-900/20 px-2 py-2">
                 <button
                   type="button"
                   onClick={() => {
@@ -833,7 +833,7 @@ export default function Home() {
                 </button>
               </div>
 
-              <div className="rounded-b-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              <div className="rounded-b-lg border border-emerald-900 bg-emerald-900/20 p-3">
                 <div className="flex items-center gap-1.5 text-zinc-500">
                   <Camera className="h-4 w-4" />
                   <span className="text-[11px] font-medium">
@@ -844,7 +844,7 @@ export default function Home() {
                   {LABEL_POOL.map((def) => (
                     <div
                       key={def.label}
-                      className="rounded-md border border-zinc-800 bg-zinc-900/80 px-2 py-1.5 text-center"
+                      className="rounded-md border border-emerald-900 bg-emerald-900/30 px-2 py-1.5 text-center"
                     >
                       <p
                         className="text-base font-semibold tabular-nums"
@@ -872,8 +872,8 @@ export default function Home() {
                 );
 
                 return (
-                  <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
-                    <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
+                  <div className="mt-3 overflow-hidden rounded-lg border border-emerald-900 bg-emerald-900/20">
+                    <div className="flex items-center justify-between border-b border-emerald-900 px-3 py-2">
                       <div className="flex items-center gap-1.5 text-zinc-500">
                         <Droplets className="h-4 w-4" />
                         <span className="text-[11px] font-medium">
@@ -885,7 +885,7 @@ export default function Home() {
                         {logsMistEvents.length === 1 ? "" : "s"}
                       </span>
                     </div>
-                    <ul className="divide-y divide-zinc-800">
+                    <ul className="divide-y divide-emerald-900">
                       {pageItems.length === 0 ? (
                         <li className="p-4 text-center text-[11px] text-zinc-500">
                           No mistings this day
@@ -899,7 +899,7 @@ export default function Home() {
                             <span className="text-[12px] font-medium text-zinc-200">
                               {formatHm(entry.hour, entry.minute)}
                             </span>
-                            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                            <span className="rounded-full bg-emerald-900 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
                               misted · {(entry.duration ?? 0).toFixed(1)}s
                             </span>
                           </li>
@@ -908,7 +908,7 @@ export default function Home() {
                     </ul>
 
                     {pageCount > 1 && (
-                      <div className="flex items-center justify-between border-t border-zinc-800 px-3 py-2">
+                      <div className="flex items-center justify-between border-t border-emerald-900 px-3 py-2">
                         <button
                           type="button"
                           onClick={() => setLogsPage((p) => Math.max(0, p - 1))}
@@ -939,7 +939,7 @@ export default function Home() {
           )}
         </main>
 
-        <nav className="grid shrink-0 grid-cols-3 border-t border-zinc-800 bg-zinc-950">
+        <nav className="grid shrink-0 grid-cols-3 border-t border-emerald-900 bg-emerald-950">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -957,7 +957,7 @@ export default function Home() {
           ))}
         </nav>
 
-        <footer className="shrink-0 border-t border-zinc-800 px-4 py-1.5 text-center">
+        <footer className="shrink-0 border-t border-emerald-900 px-4 py-1.5 text-center">
           <p className="text-[10px] text-zinc-600">
             Synthetic telemetry · no external data sources
           </p>

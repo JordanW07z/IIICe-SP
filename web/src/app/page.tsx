@@ -8,7 +8,6 @@ import {
   Droplets,
   ListTree,
   Radio,
-  Signal,
   SprayCan,
   Thermometer,
   TreeDeciduous,
@@ -49,12 +48,9 @@ type DetectionLogEntry = {
 type Tab = "monitor" | "irrigation" | "logs";
 
 const LABEL_POOL = [
-  { label: "person", color: "#22d3ee" },
-  { label: "mushroom_cap", color: "#a3e635" },
-  { label: "substrate_bag", color: "#fbbf24" },
-  { label: "moisture_zone", color: "#f472b6" },
-  { label: "vent_fan", color: "#818cf8" },
-  { label: "tray_rack", color: "#fb923c" },
+  { label: "no_sprout", color: "#fbbf24" },
+  { label: "small_medium", color: "#818cf8" },
+  { label: "mature", color: "#a3e635" },
 ];
 
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
@@ -146,16 +142,6 @@ export default function Home() {
       unit: "%",
       decimals: 0,
       icon: <Cpu className="h-4 w-4" />,
-    },
-    {
-      id: "signal",
-      label: "Link Signal",
-      value: -58,
-      min: -80,
-      max: -40,
-      unit: "dBm",
-      decimals: 0,
-      icon: <Signal className="h-4 w-4" />,
     },
   ]);
 

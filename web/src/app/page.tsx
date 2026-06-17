@@ -444,27 +444,97 @@ export default function Home() {
                   <span className="text-[11px] text-zinc-500">seconds</span>
                 </div>
 
-                <svg
-                  viewBox="0 0 200 48"
-                  preserveAspectRatio="none"
-                  className="mt-3 h-12 w-full"
-                >
-                  <polyline
-                    fill="none"
-                    stroke="#a78bfa"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    points={mistHistory
-                      .map((value, index) => {
-                        const x = (index / (mistHistory.length - 1)) * 200;
-                        const y = 44 - ((value - 8) / (35 - 8)) * 40;
-                        return `${x},${y}`;
-                      })
-                      .join(" ")}
-                  />
-                </svg>
-                <p className="mt-1 text-[10px] text-zinc-600">
+                {(() => {
+                  const dataMin = Math.min(...mistHistory);
+                  const dataMax = Math.max(...mistHistory);
+                  const padding = Math.max((dataMax - dataMin) * 0.25, 1);
+                  const chartMin = Math.max(0, dataMin - padding);
+                  const chartMax = dataMax + padding;
+                  const w = 280;
+                  const h = 110;
+                  const points = mistHistory.map((value, index) => {
+                    const x =
+                      mistHistory.length > 1
+                        ? (index / (mistHistory.length - 1)) * w
+                        : w / 2;
+                    const y =
+                      h - ((value - chartMin) / (chartMax - chartMin)) * h;
+                    return { x, y, value };
+                  });
+                  const linePoints = points
+                    .map((p) => `${p.x},${p.y}`)
+                    .join(" ");
+                  const areaPoints = `0,${h} ${linePoints} ${w},${h}`;
+
+                  return (
+                    <div className="mt-3">
+                      <div className="flex items-center justify-between text-[10px] text-zinc-600">
+                        <span>{chartMax.toFixed(1)}s</span>
+                        <span>last {mistHistory.length} readings</span>
+                      </div>
+                      <svg
+                        viewBox={`0 0 ${w} ${h}`}
+                        className="mt-1 h-28 w-full overflow-visible"
+                      >
+                        {[0.25, 0.5, 0.75].map((frac) => (
+                          <line
+                            key={frac}
+                            x1={0}
+                            x2={w}
+                            y1={h * frac}
+                            y2={h * frac}
+                            stroke="#27272a"
+                            strokeWidth="1"
+                            strokeDasharray="3 3"
+                          />
+                        ))}
+                        <polygon
+                          points={areaPoints}
+                          fill="url(#mistGradient)"
+                          opacity="0.25"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#a78bfa"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={linePoints}
+                        />
+                        {points.map((p, i) => (
+                          <circle
+                            key={i}
+                            cx={p.x}
+                            cy={p.y}
+                            r={i === points.length - 1 ? 3.5 : 2}
+                            fill={
+                              i === points.length - 1 ? "#c4b5fd" : "#a78bfa"
+                            }
+                          />
+                        ))}
+                        <defs>
+                          <linearGradient
+                            id="mistGradient"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop offset="0%" stopColor="#a78bfa" />
+                            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      <div className="flex items-center justify-between text-[10px] text-zinc-600">
+                        <span>{chartMin.toFixed(1)}s</span>
+                        <span>
+                          range {(dataMax - dataMin).toFixed(1)}s
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <p className="mt-3 text-[10px] text-zinc-600">
                   Inferred from temperature, humidity, and CO2 readings
                 </p>
               </div>

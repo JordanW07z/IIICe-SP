@@ -76,16 +76,26 @@ function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
 }
 
+// Keep boxes out of the bottom-left corner reserved for the SESSION HUD badge
+const HUD_SAFE_BOTTOM = 18;
+const HUD_SAFE_LEFT = 45;
+
 function createBox(id: number): BoundingBox {
   const def = LABEL_POOL[Math.floor(Math.random() * LABEL_POOL.length)];
   const width = randomBetween(18, 32);
   const height = randomBetween(14, 26);
+  const maxY = 100 - height;
+  let y = randomBetween(0, maxY);
+  let x = randomBetween(0, 100 - width);
+  if (y + height > 100 - HUD_SAFE_BOTTOM && x < HUD_SAFE_LEFT) {
+    y = randomBetween(0, Math.max(0, 100 - HUD_SAFE_BOTTOM - height));
+  }
   return {
     id,
     label: def.label,
     confidence: randomBetween(0.62, 0.98),
-    x: randomBetween(0, 100 - width),
-    y: randomBetween(0, 100 - height),
+    x,
+    y,
     width,
     height,
     vx: randomBetween(-0.6, 0.6),
@@ -193,6 +203,12 @@ export default function Home() {
 
           x = Math.min(Math.max(x, 0), 100 - box.width);
           y = Math.min(Math.max(y, 0), 100 - box.height);
+
+          const maxYAtX = x < HUD_SAFE_LEFT ? 100 - HUD_SAFE_BOTTOM - box.height : 100 - box.height;
+          if (y > maxYAtX) {
+            y = Math.max(0, maxYAtX);
+            vy = -Math.abs(vy);
+          }
 
           const confidence = Math.min(
             0.99,

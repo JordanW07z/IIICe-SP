@@ -72,7 +72,7 @@ function formatHm(hour: number, minute: number) {
 }
 
 function generateDaySchedule(): number[] {
-  const count = Math.floor(randomBetween(9, 13));
+  const count = 9;
   const segment = 24 / count;
   const hours: number[] = [];
   for (let i = 0; i < count; i++) {

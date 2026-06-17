@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   Camera,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Cpu,
   Droplets,
@@ -139,6 +141,8 @@ export default function Home() {
         fired: true,
       }));
   });
+  const [eventsPage, setEventsPage] = useState(0);
+  const EVENTS_PER_PAGE = 8;
 
   const [metrics, setMetrics] = useState<SensorMetric[]>([
     {
@@ -623,28 +627,75 @@ export default function Home() {
                   </span>
                 </div>
 
-                <ul className="mt-2 divide-y divide-zinc-800 border-t border-zinc-800">
-                  {wateringEvents.length === 0 ? (
-                    <li className="py-2 text-center text-[11px] text-zinc-500">
-                      No mistings yet today
-                    </li>
-                  ) : (
-                    [...wateringEvents].reverse().map((event) => (
-                      <li
-                        key={event.id}
-                        className="flex items-center justify-between py-1.5"
-                      >
-                        <span className="text-[12px] font-medium text-zinc-200">
-                          {String(event.hour).padStart(2, "0")}:
-                          {String(event.minute).padStart(2, "0")}
-                        </span>
-                        <span className="text-[10px] text-zinc-500">
-                          misted · {event.duration.toFixed(1)}s
-                        </span>
-                      </li>
-                    ))
-                  )}
-                </ul>
+                {(() => {
+                  const ordered = [...wateringEvents].reverse();
+                  const pageCount = Math.max(
+                    1,
+                    Math.ceil(ordered.length / EVENTS_PER_PAGE)
+                  );
+                  const page = Math.min(eventsPage, pageCount - 1);
+                  const pageItems = ordered.slice(
+                    page * EVENTS_PER_PAGE,
+                    page * EVENTS_PER_PAGE + EVENTS_PER_PAGE
+                  );
+
+                  return (
+                    <>
+                      <ul className="mt-2 divide-y divide-zinc-800 border-t border-zinc-800">
+                        {pageItems.length === 0 ? (
+                          <li className="py-2 text-center text-[11px] text-zinc-500">
+                            No mistings yet today
+                          </li>
+                        ) : (
+                          pageItems.map((event) => (
+                            <li
+                              key={event.id}
+                              className="flex items-center justify-between py-1.5"
+                            >
+                              <span className="text-[12px] font-medium text-zinc-200">
+                                {String(event.hour).padStart(2, "0")}:
+                                {String(event.minute).padStart(2, "0")}
+                              </span>
+                              <span className="text-[10px] text-zinc-500">
+                                misted · {event.duration.toFixed(1)}s
+                              </span>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+
+                      {pageCount > 1 && (
+                        <div className="mt-2 flex items-center justify-between border-t border-zinc-800 pt-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEventsPage((p) => Math.max(0, p - 1))
+                            }
+                            disabled={page === 0}
+                            className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <span className="text-[10px] text-zinc-500">
+                            Page {page + 1} of {pageCount}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEventsPage((p) =>
+                                Math.min(pageCount - 1, p + 1)
+                              )
+                            }
+                            disabled={page === pageCount - 1}
+                            className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </section>
           )}

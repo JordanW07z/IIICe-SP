@@ -10,7 +10,6 @@ import {
   Cpu,
   Droplets,
   ListTree,
-  Radio,
   SprayCan,
   Thermometer,
   TreeDeciduous,
@@ -147,6 +146,24 @@ const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
 
 function randomBetween(min: number, max: number) {
   return Math.random() * (max - min) + min;
+}
+
+function MushroomIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="M3 11c0-4.5 4-8 9-8s9 3.5 9 8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <path d="M9 13v5a3 3 0 0 0 6 0v-5" />
+      <path d="M9.5 13.5h5" />
+    </svg>
+  );
 }
 
 // Keep boxes out of the bottom-left corner reserved for the SESSION HUD badge
@@ -486,7 +503,7 @@ export default function Home() {
       <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-emerald-950">
         <header className="flex shrink-0 items-center justify-between border-b border-emerald-900 px-4 py-3">
           <div className="flex items-center gap-2">
-            <Radio className="h-5 w-5 text-emerald-400" />
+            <MushroomIcon className="h-5 w-5 text-emerald-400" />
             <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
               SpotShrooms Field Monitor
             </h1>

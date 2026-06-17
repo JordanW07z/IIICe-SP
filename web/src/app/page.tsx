@@ -119,13 +119,15 @@ export default function Home() {
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
     const startHours = [2, 6, 9, 12, 15, 18, 21, 23.5];
     const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-    return startHours.map((hour, index) => ({
-      id: index,
-      hour: Math.floor(hour),
-      minute: Math.round((hour % 1) * 60),
-      duration: randomBetween(14, 28),
-      fired: hour <= currentHour,
-    }));
+    return startHours
+      .filter((hour) => hour <= currentHour)
+      .map((hour, index) => ({
+        id: index,
+        hour: Math.floor(hour),
+        minute: Math.round((hour % 1) * 60),
+        duration: randomBetween(14, 28),
+        fired: true,
+      }));
   });
 
   const [metrics, setMetrics] = useState<SensorMetric[]>([
@@ -282,28 +284,39 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Clock tick to advance "now" and mark scheduled waterings as fired
+  // Clock tick to advance "now" and log misting events as their time passes
   useEffect(() => {
+    const scheduleHours = [2, 6, 9, 12, 15, 18, 21, 23.5];
     const interval = setInterval(() => {
       const current = new Date();
       setNow(current);
       const currentHour = current.getHours() + current.getMinutes() / 60;
-      setWateringEvents((events) =>
-        events.map((event) =>
-          !event.fired && event.hour + event.minute / 60 <= currentHour
-            ? { ...event, fired: true }
-            : event
-        )
-      );
+      setWateringEvents((events) => {
+        const loggedHours = new Set(events.map((e) => e.hour + e.minute / 60));
+        const due = scheduleHours.find(
+          (hour) => hour <= currentHour && !loggedHours.has(hour)
+        );
+        if (due === undefined) return events;
+        return [
+          ...events,
+          {
+            id: events.length,
+            hour: Math.floor(due),
+            minute: Math.round((due % 1) * 60),
+            duration: randomBetween(14, 28),
+            fired: true,
+          },
+        ];
+      });
     }, 15000);
 
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="min-h-screen w-full bg-black text-zinc-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-zinc-950">
-        <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
+    <div className="h-dvh w-full bg-black text-zinc-100">
+      <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-zinc-950">
+        <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-3">
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-emerald-400" />
             <div>
@@ -323,11 +336,11 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="flex flex-1 flex-col gap-4 p-4 pb-2">
+        <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pb-2">
           {activeTab === "monitor" && (
             <>
               {/* Camera feed */}
-              <section className="relative aspect-[4/3] w-full overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
+              <section className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-xl border border-zinc-800 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black">
                 {/* faux video texture */}
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.08),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
@@ -579,106 +592,42 @@ export default function Home() {
                 </p>
               </div>
 
-              {/* Watering schedule */}
-              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+              {/* Misted today */}
+              <div className="mt-3 flex-1 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-zinc-500">
                     <Clock className="h-4 w-4" />
                     <span className="text-[11px] font-medium">
-                      Watering Schedule
+                      Misted Today
                     </span>
                   </div>
                   <span className="text-[10px] text-zinc-500">
-                    {now.toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {wateringEvents.length} event
+                    {wateringEvents.length === 1 ? "" : "s"}
                   </span>
                 </div>
 
-                {(() => {
-                  const w = 280;
-                  const currentHour = now.getHours() + now.getMinutes() / 60;
-                  const nowX = (currentHour / 24) * w;
-
-                  return (
-                    <svg
-                      viewBox={`0 0 ${w} 40`}
-                      className="mt-4 h-10 w-full overflow-visible"
-                    >
-                      <line
-                        x1={0}
-                        x2={w}
-                        y1={20}
-                        y2={20}
-                        stroke="#27272a"
-                        strokeWidth="2"
-                      />
-                      {[0, 6, 12, 18, 24].map((h) => (
-                        <line
-                          key={h}
-                          x1={(h / 24) * w}
-                          x2={(h / 24) * w}
-                          y1={16}
-                          y2={24}
-                          stroke="#3f3f46"
-                          strokeWidth="1"
-                        />
-                      ))}
-                      {wateringEvents.map((event) => {
-                        const x =
-                          ((event.hour + event.minute / 60) / 24) * w;
-                        return (
-                          <circle
-                            key={event.id}
-                            cx={x}
-                            cy={20}
-                            r={event.fired ? 4 : 3}
-                            fill={event.fired ? "#a78bfa" : "#3f3f46"}
-                            stroke={event.fired ? "#c4b5fd" : "#52525b"}
-                            strokeWidth="1"
-                          />
-                        );
-                      })}
-                      <line
-                        x1={nowX}
-                        x2={nowX}
-                        y1={6}
-                        y2={34}
-                        stroke="#34d399"
-                        strokeWidth="1.5"
-                      />
-                    </svg>
-                  );
-                })()}
-                <div className="flex items-center justify-between text-[10px] text-zinc-600">
-                  <span>12 AM</span>
-                  <span>6 AM</span>
-                  <span>12 PM</span>
-                  <span>6 PM</span>
-                  <span>12 AM</span>
-                </div>
-
-                <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
-                  {wateringEvents.map((event) => (
-                    <li
-                      key={event.id}
-                      className="flex items-center justify-between py-2"
-                    >
-                      <span
-                        className={`text-[12px] font-medium ${
-                          event.fired ? "text-zinc-200" : "text-zinc-500"
-                        }`}
-                      >
-                        {String(event.hour).padStart(2, "0")}:
-                        {String(event.minute).padStart(2, "0")}
-                      </span>
-                      <span className="text-[10px] text-zinc-500">
-                        {event.fired ? "misted" : "scheduled"} ·{" "}
-                        {event.duration.toFixed(1)}s
-                      </span>
+                <ul className="mt-2 divide-y divide-zinc-800 border-t border-zinc-800">
+                  {wateringEvents.length === 0 ? (
+                    <li className="py-2 text-center text-[11px] text-zinc-500">
+                      No mistings yet today
                     </li>
-                  ))}
+                  ) : (
+                    [...wateringEvents].reverse().map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex items-center justify-between py-1.5"
+                      >
+                        <span className="text-[12px] font-medium text-zinc-200">
+                          {String(event.hour).padStart(2, "0")}:
+                          {String(event.minute).padStart(2, "0")}
+                        </span>
+                        <span className="text-[10px] text-zinc-500">
+                          misted · {event.duration.toFixed(1)}s
+                        </span>
+                      </li>
+                    ))
+                  )}
                 </ul>
               </div>
             </section>
@@ -724,13 +673,13 @@ export default function Home() {
           )}
         </main>
 
-        <nav className="grid grid-cols-3 border-t border-zinc-800 bg-zinc-950">
+        <nav className="grid shrink-0 grid-cols-3 border-t border-zinc-800 bg-zinc-950">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+              className={`flex flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors ${
                 activeTab === tab.id
                   ? "text-emerald-400"
                   : "text-zinc-500 hover:text-zinc-300"
@@ -742,7 +691,7 @@ export default function Home() {
           ))}
         </nav>
 
-        <footer className="border-t border-zinc-800 px-4 py-2 text-center">
+        <footer className="shrink-0 border-t border-zinc-800 px-4 py-1.5 text-center">
           <p className="text-[10px] text-zinc-600">
             Synthetic telemetry · no external data sources
           </p>

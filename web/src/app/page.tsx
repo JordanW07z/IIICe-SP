@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   Camera,
+  Clock,
   Cpu,
   Droplets,
   ListTree,
@@ -43,6 +44,14 @@ type DetectionLogEntry = {
   label: string;
   confidence: number;
   time: string;
+};
+
+type WateringEvent = {
+  id: number;
+  hour: number;
+  minute: number;
+  duration: number;
+  fired: boolean;
 };
 
 type Tab = "monitor" | "irrigation" | "logs";
@@ -105,6 +114,19 @@ export default function Home() {
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>(
     () => Object.fromEntries(LABEL_POOL.map((def) => [def.label, 0]))
   );
+
+  const [now, setNow] = useState(() => new Date());
+  const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
+    const startHours = [2, 6, 9, 12, 15, 18, 21, 23.5];
+    const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
+    return startHours.map((hour, index) => ({
+      id: index,
+      hour: Math.floor(hour),
+      minute: Math.round((hour % 1) * 60),
+      duration: randomBetween(14, 28),
+      fired: hour <= currentHour,
+    }));
+  });
 
   const [metrics, setMetrics] = useState<SensorMetric[]>([
     {
@@ -256,6 +278,24 @@ export default function Home() {
         return next;
       });
     }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clock tick to advance "now" and mark scheduled waterings as fired
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const current = new Date();
+      setNow(current);
+      const currentHour = current.getHours() + current.getMinutes() / 60;
+      setWateringEvents((events) =>
+        events.map((event) =>
+          !event.fired && event.hour + event.minute / 60 <= currentHour
+            ? { ...event, fired: true }
+            : event
+        )
+      );
+    }, 15000);
 
     return () => clearInterval(interval);
   }, []);
@@ -537,6 +577,109 @@ export default function Home() {
                 <p className="mt-3 text-[10px] text-zinc-600">
                   Inferred from temperature, humidity, and CO2 readings
                 </p>
+              </div>
+
+              {/* Watering schedule */}
+              <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-zinc-500">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-[11px] font-medium">
+                      Watering Schedule
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500">
+                    {now.toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+
+                {(() => {
+                  const w = 280;
+                  const currentHour = now.getHours() + now.getMinutes() / 60;
+                  const nowX = (currentHour / 24) * w;
+
+                  return (
+                    <svg
+                      viewBox={`0 0 ${w} 40`}
+                      className="mt-4 h-10 w-full overflow-visible"
+                    >
+                      <line
+                        x1={0}
+                        x2={w}
+                        y1={20}
+                        y2={20}
+                        stroke="#27272a"
+                        strokeWidth="2"
+                      />
+                      {[0, 6, 12, 18, 24].map((h) => (
+                        <line
+                          key={h}
+                          x1={(h / 24) * w}
+                          x2={(h / 24) * w}
+                          y1={16}
+                          y2={24}
+                          stroke="#3f3f46"
+                          strokeWidth="1"
+                        />
+                      ))}
+                      {wateringEvents.map((event) => {
+                        const x =
+                          ((event.hour + event.minute / 60) / 24) * w;
+                        return (
+                          <circle
+                            key={event.id}
+                            cx={x}
+                            cy={20}
+                            r={event.fired ? 4 : 3}
+                            fill={event.fired ? "#a78bfa" : "#3f3f46"}
+                            stroke={event.fired ? "#c4b5fd" : "#52525b"}
+                            strokeWidth="1"
+                          />
+                        );
+                      })}
+                      <line
+                        x1={nowX}
+                        x2={nowX}
+                        y1={6}
+                        y2={34}
+                        stroke="#34d399"
+                        strokeWidth="1.5"
+                      />
+                    </svg>
+                  );
+                })()}
+                <div className="flex items-center justify-between text-[10px] text-zinc-600">
+                  <span>12 AM</span>
+                  <span>6 AM</span>
+                  <span>12 PM</span>
+                  <span>6 PM</span>
+                  <span>12 AM</span>
+                </div>
+
+                <ul className="mt-3 divide-y divide-zinc-800 border-t border-zinc-800">
+                  {wateringEvents.map((event) => (
+                    <li
+                      key={event.id}
+                      className="flex items-center justify-between py-2"
+                    >
+                      <span
+                        className={`text-[12px] font-medium ${
+                          event.fired ? "text-zinc-200" : "text-zinc-500"
+                        }`}
+                      >
+                        {String(event.hour).padStart(2, "0")}:
+                        {String(event.minute).padStart(2, "0")}
+                      </span>
+                      <span className="text-[10px] text-zinc-500">
+                        {event.fired ? "misted" : "scheduled"} ·{" "}
+                        {event.duration.toFixed(1)}s
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             </section>
           )}

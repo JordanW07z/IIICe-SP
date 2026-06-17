@@ -956,12 +956,6 @@ export default function Home() {
             </button>
           ))}
         </nav>
-
-        <footer className="shrink-0 border-t border-emerald-900 px-4 py-1.5 text-center">
-          <p className="text-[10px] text-zinc-600">
-            Synthetic telemetry · no external data sources
-          </p>
-        </footer>
       </div>
     </div>
   );

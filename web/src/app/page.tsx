@@ -102,6 +102,10 @@ export default function Home() {
   const logIdRef = useRef(0);
   const lastLoggedBoxIdRef = useRef(0);
 
+  const [sessionCounts, setSessionCounts] = useState<Record<string, number>>(
+    () => Object.fromEntries(LABEL_POOL.map((def) => [def.label, 0]))
+  );
+
   const [metrics, setMetrics] = useState<SensorMetric[]>([
     {
       id: "dht22-temp",
@@ -218,6 +222,10 @@ export default function Home() {
           time: new Date().toLocaleTimeString(),
         };
         setLogEntries((logs) => [entry, ...logs].slice(0, 30));
+        setSessionCounts((counts) => ({
+          ...counts,
+          [box.label]: (counts[box.label] ?? 0) + 1,
+        }));
       }
     }
   }, [boxes]);
@@ -336,6 +344,9 @@ export default function Home() {
                   </span>
                 </div>
                 <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
+                  <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
+                    Session
+                  </span>
                   {LABEL_POOL.map((def) => (
                     <span
                       key={def.label}
@@ -345,11 +356,12 @@ export default function Home() {
                         className="h-1.5 w-1.5 rounded-full"
                         style={{ backgroundColor: def.color }}
                       />
-                      {boxes.filter((b) => b.label === def.label).length}
+                      {sessionCounts[def.label] ?? 0}
                     </span>
                   ))}
                   <span className="ml-1 border-l border-zinc-700 pl-1.5 text-[10px] font-medium text-zinc-300">
-                    {boxes.length} total
+                    {Object.values(sessionCounts).reduce((a, b) => a + b, 0)}{" "}
+                    total
                   </span>
                 </div>
 

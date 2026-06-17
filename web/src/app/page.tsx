@@ -501,19 +501,11 @@ export default function Home() {
   return (
     <div className="h-dvh w-full bg-emerald-950 text-zinc-100">
       <div className="mx-auto flex h-dvh w-full max-w-md flex-col bg-emerald-950">
-        <header className="flex shrink-0 items-center justify-between border-b border-emerald-900 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <MushroomIcon className="h-5 w-5 text-emerald-400" />
-            <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
-              SpotShrooms Field Monitor
-            </h1>
-          </div>
-          <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
-            <span className="text-[11px] font-medium text-emerald-300">
-              LIVE
-            </span>
-          </div>
+        <header className="flex shrink-0 items-center gap-2 border-b border-emerald-900 px-4 py-3">
+          <MushroomIcon className="h-5 w-5 text-emerald-400" />
+          <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
+            SpotShrooms Field Monitor
+          </h1>
         </header>
 
         <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pb-2">

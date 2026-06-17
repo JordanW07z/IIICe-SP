@@ -73,7 +73,7 @@ function formatHm(hour: number, minute: number) {
 
 function buildHistoricalDay(): CombinedLogEntry[] {
   const entries: CombinedLogEntry[] = [];
-  const detectionCount = Math.floor(randomBetween(10, 18));
+  const detectionCount = Math.floor(randomBetween(200, 450));
   for (let i = 0; i < detectionCount; i++) {
     const def = LABEL_POOL[Math.floor(Math.random() * LABEL_POOL.length)];
     const minutesOfDay = Math.floor(randomBetween(0, 1440));

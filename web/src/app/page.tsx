@@ -335,10 +335,21 @@ export default function Home() {
                     {fps.toFixed(1)} FPS
                   </span>
                 </div>
-                <div className="absolute bottom-2 left-2 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
-                  <span className="text-[10px] font-medium text-zinc-300">
-                    {boxes.length} object{boxes.length === 1 ? "" : "s"}{" "}
-                    tracked
+                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
+                  {LABEL_POOL.map((def) => (
+                    <span
+                      key={def.label}
+                      className="flex items-center gap-1 text-[10px] font-medium text-zinc-300"
+                    >
+                      <span
+                        className="h-1.5 w-1.5 rounded-full"
+                        style={{ backgroundColor: def.color }}
+                      />
+                      {boxes.filter((b) => b.label === def.label).length}
+                    </span>
+                  ))}
+                  <span className="ml-1 border-l border-zinc-700 pl-1.5 text-[10px] font-medium text-zinc-300">
+                    {boxes.length} total
                   </span>
                 </div>
 

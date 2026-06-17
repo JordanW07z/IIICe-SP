@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   Camera,
@@ -45,7 +45,8 @@ type DetectionLogEntry = {
   id: number;
   label: string;
   confidence: number;
-  time: string;
+  hour: number;
+  minute: number;
 };
 
 type WateringEvent = {
@@ -55,6 +56,51 @@ type WateringEvent = {
   duration: number;
   fired: boolean;
 };
+
+type CombinedLogEntry = {
+  id: string;
+  type: "detection" | "irrigation";
+  hour: number;
+  minute: number;
+  label?: string;
+  confidence?: number;
+  duration?: number;
+};
+
+function formatHm(hour: number, minute: number) {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function buildHistoricalDay(): CombinedLogEntry[] {
+  const entries: CombinedLogEntry[] = [];
+  const detectionCount = Math.floor(randomBetween(10, 18));
+  for (let i = 0; i < detectionCount; i++) {
+    const def = LABEL_POOL[Math.floor(Math.random() * LABEL_POOL.length)];
+    const minutesOfDay = Math.floor(randomBetween(0, 1440));
+    entries.push({
+      id: `d-${i}`,
+      type: "detection",
+      hour: Math.floor(minutesOfDay / 60),
+      minute: minutesOfDay % 60,
+      label: def.label,
+      confidence: randomBetween(0.6, 0.98),
+    });
+  }
+  const irrigationCount = Math.floor(randomBetween(8, 11));
+  for (let i = 0; i < irrigationCount; i++) {
+    const minutesOfDay = Math.floor(randomBetween(0, 1440));
+    entries.push({
+      id: `i-${i}`,
+      type: "irrigation",
+      hour: Math.floor(minutesOfDay / 60),
+      minute: minutesOfDay % 60,
+      duration: randomBetween(14, 28),
+    });
+  }
+  return entries.sort(
+    (a, b) => b.hour * 60 + b.minute - (a.hour * 60 + a.minute)
+  );
+}
 
 type Tab = "monitor" | "irrigation" | "logs";
 
@@ -143,6 +189,12 @@ export default function Home() {
   });
   const [eventsPage, setEventsPage] = useState(0);
   const EVENTS_PER_PAGE = 8;
+
+  const [historicalDays] = useState<CombinedLogEntry[][]>(() =>
+    Array.from({ length: 4 }, () => buildHistoricalDay())
+  );
+  const [logsDayIndex, setLogsDayIndex] = useState(0);
+  const [logsPage, setLogsPage] = useState(0);
 
   const [metrics, setMetrics] = useState<SensorMetric[]>([
     {
@@ -259,11 +311,13 @@ export default function Home() {
       if (box) {
         lastLoggedBoxIdRef.current = newest;
         logIdRef.current += 1;
+        const createdAt = new Date();
         const entry: DetectionLogEntry = {
           id: logIdRef.current,
           label: box.label,
           confidence: box.confidence,
-          time: new Date().toLocaleTimeString(),
+          hour: createdAt.getHours(),
+          minute: createdAt.getMinutes(),
         };
         setLogEntries((logs) => [entry, ...logs].slice(0, 30));
         setSessionCounts((counts) => ({
@@ -332,6 +386,39 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, []);
+
+  const todayCombined = useMemo<CombinedLogEntry[]>(() => {
+    const detections: CombinedLogEntry[] = logEntries.map((e) => ({
+      id: `d-${e.id}`,
+      type: "detection",
+      hour: e.hour,
+      minute: e.minute,
+      label: e.label,
+      confidence: e.confidence,
+    }));
+    const irrigation: CombinedLogEntry[] = wateringEvents.map((e) => ({
+      id: `i-${e.id}`,
+      type: "irrigation",
+      hour: e.hour,
+      minute: e.minute,
+      duration: e.duration,
+    }));
+    return [...detections, ...irrigation].sort(
+      (a, b) => b.hour * 60 + b.minute - (a.hour * 60 + a.minute)
+    );
+  }, [logEntries, wateringEvents]);
+
+  const totalLogDays = historicalDays.length + 1;
+  const selectedDayEntries =
+    logsDayIndex === 0 ? todayCombined : historicalDays[logsDayIndex - 1];
+
+  const logsDayLabel = (() => {
+    if (logsDayIndex === 0) return "Today";
+    if (logsDayIndex === 1) return "Yesterday";
+    const d = new Date();
+    d.setDate(d.getDate() - logsDayIndex);
+    return d.toLocaleDateString([], { month: "short", day: "numeric" });
+  })();
 
   return (
     <div className="h-dvh w-full bg-black text-zinc-100">
@@ -701,41 +788,121 @@ export default function Home() {
           )}
 
           {activeTab === "logs" && (
-            <section>
+            <section className="flex min-h-0 flex-1 flex-col">
               <div className="mb-2 flex items-center gap-2 px-0.5">
                 <ListTree className="h-4 w-4 text-amber-400" />
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Detection Log
+                  Daily Log
                 </h2>
               </div>
-              <div className="overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
-                {logEntries.length === 0 ? (
-                  <p className="p-4 text-center text-[11px] text-zinc-500">
-                    Waiting for detections…
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-zinc-800">
-                    {logEntries.map((entry) => (
-                      <li
-                        key={entry.id}
-                        className="flex items-center justify-between px-3 py-2.5"
-                      >
-                        <div>
-                          <p className="text-[12px] font-medium text-zinc-200">
-                            {entry.label}
-                          </p>
-                          <p className="text-[10px] text-zinc-500">
-                            {entry.time}
-                          </p>
-                        </div>
-                        <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
-                          {(entry.confidence * 100).toFixed(0)}%
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+
+              <div className="flex items-center justify-between rounded-t-lg border border-b-0 border-zinc-800 bg-zinc-900/60 px-2 py-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLogsDayIndex((d) => Math.min(totalLogDays - 1, d + 1));
+                    setLogsPage(0);
+                  }}
+                  disabled={logsDayIndex === totalLogDays - 1}
+                  className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-[11px] font-medium text-zinc-300">
+                  {logsDayLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLogsDayIndex((d) => Math.max(0, d - 1));
+                    setLogsPage(0);
+                  }}
+                  disabled={logsDayIndex === 0}
+                  className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
+
+              {(() => {
+                const pageCount = Math.max(
+                  1,
+                  Math.ceil(selectedDayEntries.length / EVENTS_PER_PAGE)
+                );
+                const page = Math.min(logsPage, pageCount - 1);
+                const pageItems = selectedDayEntries.slice(
+                  page * EVENTS_PER_PAGE,
+                  page * EVENTS_PER_PAGE + EVENTS_PER_PAGE
+                );
+
+                return (
+                  <div className="overflow-hidden rounded-b-lg border border-zinc-800 bg-zinc-900/60">
+                    <ul className="divide-y divide-zinc-800">
+                      {pageItems.length === 0 ? (
+                        <li className="p-4 text-center text-[11px] text-zinc-500">
+                          No activity this day
+                        </li>
+                      ) : (
+                        pageItems.map((entry) => (
+                          <li
+                            key={entry.id}
+                            className="flex items-center justify-between px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2">
+                              {entry.type === "detection" ? (
+                                <Camera className="h-3.5 w-3.5 text-sky-400" />
+                              ) : (
+                                <Droplets className="h-3.5 w-3.5 text-violet-400" />
+                              )}
+                              <div>
+                                <p className="text-[12px] font-medium text-zinc-200">
+                                  {entry.type === "detection"
+                                    ? entry.label
+                                    : "Misted"}
+                                </p>
+                                <p className="text-[10px] text-zinc-500">
+                                  {formatHm(entry.hour, entry.minute)}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
+                              {entry.type === "detection"
+                                ? `${((entry.confidence ?? 0) * 100).toFixed(0)}%`
+                                : `${(entry.duration ?? 0).toFixed(1)}s`}
+                            </span>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+
+                    {pageCount > 1 && (
+                      <div className="flex items-center justify-between border-t border-zinc-800 px-3 py-2">
+                        <button
+                          type="button"
+                          onClick={() => setLogsPage((p) => Math.max(0, p - 1))}
+                          disabled={page === 0}
+                          className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </button>
+                        <span className="text-[10px] text-zinc-500">
+                          Page {page + 1} of {pageCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setLogsPage((p) => Math.min(pageCount - 1, p + 1))
+                          }
+                          disabled={page === pageCount - 1}
+                          className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </section>
           )}
         </main>

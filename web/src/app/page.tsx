@@ -504,7 +504,7 @@ export default function Home() {
                 <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
                   <Camera className="h-3 w-3 text-zinc-300" />
                   <span className="text-[10px] font-medium text-zinc-300">
-                    CAM-01 · YOLOv11n
+                    CAM-01 · YOLOv11-cls
                   </span>
                 </div>
                 <div className="absolute right-2 top-2 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">

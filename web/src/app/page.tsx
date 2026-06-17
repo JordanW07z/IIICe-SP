@@ -129,7 +129,7 @@ export default function Home() {
 
   const [now, setNow] = useState(() => new Date());
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
-    const startHours = [0.5, 2.5, 4.5, 6.5, 8.5, 10.5, 12.5, 14.5, 16.5, 18.5, 20.5];
+    const startHours = [0.75, 2.25, 3.75, 4.5, 7, 9.5, 10.25, 13.75, 16, 18.5, 22.25];
     const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
     return startHours
       .filter((hour) => hour <= currentHour)
@@ -306,7 +306,7 @@ export default function Home() {
 
   // Clock tick to advance "now" and log misting events as their time passes
   useEffect(() => {
-    const scheduleHours = [0.5, 2.5, 4.5, 6.5, 8.5, 10.5, 12.5, 14.5, 16.5, 18.5, 20.5];
+    const scheduleHours = [0.75, 2.25, 3.75, 4.5, 7, 9.5, 10.25, 13.75, 16, 18.5, 22.25];
     const interval = setInterval(() => {
       const current = new Date();
       setNow(current);

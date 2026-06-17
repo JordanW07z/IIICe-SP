@@ -412,6 +412,20 @@ export default function Home() {
   const selectedDayEntries =
     logsDayIndex === 0 ? todayCombined : historicalDays[logsDayIndex - 1];
 
+  const logsDetectionCounts =
+    logsDayIndex === 0
+      ? sessionCounts
+      : selectedDayEntries
+          .filter((e) => e.type === "detection")
+          .reduce<Record<string, number>>((acc, e) => {
+            acc[e.label ?? ""] = (acc[e.label ?? ""] ?? 0) + 1;
+            return acc;
+          }, Object.fromEntries(LABEL_POOL.map((def) => [def.label, 0])));
+
+  const logsMistEvents = selectedDayEntries.filter(
+    (e) => e.type === "irrigation"
+  );
+
   const logsDayLabel = (() => {
     if (logsDayIndex === 0) return "Today";
     if (logsDayIndex === 1) return "Yesterday";
@@ -824,23 +838,62 @@ export default function Home() {
                 </button>
               </div>
 
+              <div className="rounded-b-lg border border-zinc-800 bg-zinc-900/60 p-3">
+                <div className="flex items-center gap-1.5 text-zinc-500">
+                  <Camera className="h-4 w-4" />
+                  <span className="text-[11px] font-medium">
+                    Detection Counts
+                  </span>
+                </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  {LABEL_POOL.map((def) => (
+                    <div
+                      key={def.label}
+                      className="rounded-md border border-zinc-800 bg-zinc-900/80 px-2 py-1.5 text-center"
+                    >
+                      <p
+                        className="text-base font-semibold tabular-nums"
+                        style={{ color: def.color }}
+                      >
+                        {logsDetectionCounts[def.label] ?? 0}
+                      </p>
+                      <p className="truncate text-[9px] text-zinc-500">
+                        {def.label}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {(() => {
                 const pageCount = Math.max(
                   1,
-                  Math.ceil(selectedDayEntries.length / EVENTS_PER_PAGE)
+                  Math.ceil(logsMistEvents.length / EVENTS_PER_PAGE)
                 );
                 const page = Math.min(logsPage, pageCount - 1);
-                const pageItems = selectedDayEntries.slice(
+                const pageItems = logsMistEvents.slice(
                   page * EVENTS_PER_PAGE,
                   page * EVENTS_PER_PAGE + EVENTS_PER_PAGE
                 );
 
                 return (
-                  <div className="overflow-hidden rounded-b-lg border border-zinc-800 bg-zinc-900/60">
+                  <div className="mt-3 overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900/60">
+                    <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
+                      <div className="flex items-center gap-1.5 text-zinc-500">
+                        <Droplets className="h-4 w-4" />
+                        <span className="text-[11px] font-medium">
+                          Mist Timings
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-500">
+                        {logsMistEvents.length} event
+                        {logsMistEvents.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
                     <ul className="divide-y divide-zinc-800">
                       {pageItems.length === 0 ? (
                         <li className="p-4 text-center text-[11px] text-zinc-500">
-                          No activity this day
+                          No mistings this day
                         </li>
                       ) : (
                         pageItems.map((entry) => (
@@ -848,27 +901,11 @@ export default function Home() {
                             key={entry.id}
                             className="flex items-center justify-between px-3 py-2"
                           >
-                            <div className="flex items-center gap-2">
-                              {entry.type === "detection" ? (
-                                <Camera className="h-3.5 w-3.5 text-sky-400" />
-                              ) : (
-                                <Droplets className="h-3.5 w-3.5 text-violet-400" />
-                              )}
-                              <div>
-                                <p className="text-[12px] font-medium text-zinc-200">
-                                  {entry.type === "detection"
-                                    ? entry.label
-                                    : "Misted"}
-                                </p>
-                                <p className="text-[10px] text-zinc-500">
-                                  {formatHm(entry.hour, entry.minute)}
-                                </p>
-                              </div>
-                            </div>
+                            <span className="text-[12px] font-medium text-zinc-200">
+                              {formatHm(entry.hour, entry.minute)}
+                            </span>
                             <span className="rounded-full bg-zinc-800 px-2 py-0.5 text-[10px] font-medium text-zinc-300">
-                              {entry.type === "detection"
-                                ? `${((entry.confidence ?? 0) * 100).toFixed(0)}%`
-                                : `${(entry.duration ?? 0).toFixed(1)}s`}
+                              misted · {(entry.duration ?? 0).toFixed(1)}s
                             </span>
                           </li>
                         ))

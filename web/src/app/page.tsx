@@ -504,8 +504,13 @@ export default function Home() {
             <>
               {/* Camera feed */}
               <section className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
-                {/* faux video texture */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.08),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.08),transparent_50%)]" />
+                {/* live feed background */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: "url(/shroomzz.jpeg)" }}
+                />
+                <div className="absolute inset-0 bg-black/35" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.12),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.08),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
 
                 {/* scan line */}

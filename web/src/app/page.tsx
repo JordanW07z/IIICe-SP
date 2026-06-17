@@ -74,15 +74,17 @@ function formatHm(hour: number, minute: number) {
 function buildHistoricalDay(): CombinedLogEntry[] {
   const entries: CombinedLogEntry[] = [];
   const detectionCount = Math.floor(randomBetween(200, 450));
+  let matureCount = 0;
   for (let i = 0; i < detectionCount; i++) {
-    const def = LABEL_POOL[Math.floor(Math.random() * LABEL_POOL.length)];
+    const label = pickWeightedLabel(matureCount, i);
+    if (label === "mature") matureCount += 1;
     const minutesOfDay = Math.floor(randomBetween(0, 1440));
     entries.push({
       id: `d-${i}`,
       type: "detection",
       hour: Math.floor(minutesOfDay / 60),
       minute: minutesOfDay % 60,
-      label: def.label,
+      label,
       confidence: randomBetween(0.6, 0.98),
     });
   }
@@ -110,6 +112,18 @@ const LABEL_POOL = [
   { label: "mature", color: "#a3e635" },
 ];
 
+// Mature mushrooms should stay rare: cap them under 5% of total detections
+const MATURE_MAX_RATIO = 0.05;
+const MATURE_PICK_CHANCE = 0.04;
+
+function pickWeightedLabel(matureCount: number, totalCount: number): string {
+  const matureRatio = totalCount > 0 ? matureCount / totalCount : 0;
+  if (matureRatio < MATURE_MAX_RATIO && Math.random() < MATURE_PICK_CHANCE) {
+    return "mature";
+  }
+  return Math.random() < 0.5 ? "no_sprout" : "small_medium";
+}
+
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "monitor", label: "Monitor", icon: <Camera className="h-5 w-5" /> },
   {
@@ -128,8 +142,13 @@ function randomBetween(min: number, max: number) {
 const HUD_SAFE_BOTTOM = 18;
 const HUD_SAFE_LEFT = 45;
 
-function createBox(id: number): BoundingBox {
-  const def = LABEL_POOL[Math.floor(Math.random() * LABEL_POOL.length)];
+function createBox(
+  id: number,
+  matureCount: number,
+  totalCount: number
+): BoundingBox {
+  const label = pickWeightedLabel(matureCount, totalCount);
+  const def = LABEL_POOL.find((d) => d.label === label)!;
   const width = randomBetween(18, 32);
   const height = randomBetween(14, 26);
   const maxY = 100 - height;
@@ -172,6 +191,10 @@ export default function Home() {
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>(
     () => Object.fromEntries(LABEL_POOL.map((def) => [def.label, 0]))
   );
+  const sessionCountsRef = useRef(sessionCounts);
+  useEffect(() => {
+    sessionCountsRef.current = sessionCounts;
+  }, [sessionCounts]);
 
   const [now, setNow] = useState(() => new Date());
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
@@ -243,7 +266,9 @@ export default function Home() {
   useEffect(() => {
     const initial = Array.from({ length: 4 }, () => {
       boxIdRef.current += 1;
-      return createBox(boxIdRef.current);
+      const counts = sessionCountsRef.current;
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      return createBox(boxIdRef.current, counts.mature ?? 0, total);
     });
     setBoxes(initial);
 
@@ -283,7 +308,9 @@ export default function Home() {
 
         if (next.length < targetCount) {
           boxIdRef.current += 1;
-          next.push(createBox(boxIdRef.current));
+          const counts = sessionCountsRef.current;
+          const total = Object.values(counts).reduce((a, b) => a + b, 0);
+          next.push(createBox(boxIdRef.current, counts.mature ?? 0, total));
         } else if (next.length > 3 && Math.random() > 0.6) {
           next.splice(Math.floor(Math.random() * next.length), 1);
         }

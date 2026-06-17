@@ -73,7 +73,13 @@ function formatHm(hour: number, minute: number) {
 
 function generateDaySchedule(): number[] {
   const count = Math.floor(randomBetween(9, 13));
-  const hours = Array.from({ length: count }, () => randomBetween(0, 24));
+  const segment = 24 / count;
+  const hours: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const base = i * segment + segment / 2;
+    const jitter = randomBetween(-segment * 0.4, segment * 0.4);
+    hours.push(Math.min(23.98, Math.max(0, base + jitter)));
+  }
   return hours.sort((a, b) => a - b);
 }
 
@@ -94,17 +100,16 @@ function buildHistoricalDay(): CombinedLogEntry[] {
       confidence: randomBetween(0.6, 0.98),
     });
   }
-  const irrigationCount = Math.floor(randomBetween(9, 13));
-  for (let i = 0; i < irrigationCount; i++) {
-    const minutesOfDay = Math.floor(randomBetween(0, 1440));
+  const irrigationSchedule = generateDaySchedule();
+  irrigationSchedule.forEach((hourOfDay, i) => {
     entries.push({
       id: `i-${i}`,
       type: "irrigation",
-      hour: Math.floor(minutesOfDay / 60),
-      minute: minutesOfDay % 60,
+      hour: Math.floor(hourOfDay),
+      minute: Math.round((hourOfDay % 1) * 60),
       duration: randomBetween(14, 28),
     });
-  }
+  });
   return entries.sort(
     (a, b) => b.hour * 60 + b.minute - (a.hour * 60 + a.minute)
   );
@@ -204,17 +209,18 @@ export default function Home() {
 
   const [now, setNow] = useState(() => new Date());
   const [todaySchedule] = useState<number[]>(() => generateDaySchedule());
+  const loggedScheduleHoursRef = useRef<Set<number>>(new Set());
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
     const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-    return todaySchedule
-      .filter((hour) => hour <= currentHour)
-      .map((hour, index) => ({
-        id: index,
-        hour: Math.floor(hour),
-        minute: Math.round((hour % 1) * 60),
-        duration: randomBetween(14, 28),
-        fired: true,
-      }));
+    const due = todaySchedule.filter((hour) => hour <= currentHour);
+    due.forEach((hour) => loggedScheduleHoursRef.current.add(hour));
+    return due.map((hour, index) => ({
+      id: index,
+      hour: Math.floor(hour),
+      minute: Math.round((hour % 1) * 60),
+      duration: randomBetween(14, 28),
+      fired: true,
+    }));
   });
   const [eventsPage, setEventsPage] = useState(0);
   const EVENTS_PER_PAGE = 8;
@@ -397,23 +403,22 @@ export default function Home() {
       const current = new Date();
       setNow(current);
       const currentHour = current.getHours() + current.getMinutes() / 60;
-      setWateringEvents((events) => {
-        const loggedHours = new Set(events.map((e) => e.hour + e.minute / 60));
-        const due = todaySchedule.find(
-          (hour) => hour <= currentHour && !loggedHours.has(hour)
-        );
-        if (due === undefined) return events;
-        return [
-          ...events,
-          {
-            id: events.length,
-            hour: Math.floor(due),
-            minute: Math.round((due % 1) * 60),
-            duration: randomBetween(14, 28),
-            fired: true,
-          },
-        ];
-      });
+      const due = todaySchedule.find(
+        (hour) =>
+          hour <= currentHour && !loggedScheduleHoursRef.current.has(hour)
+      );
+      if (due === undefined) return;
+      loggedScheduleHoursRef.current.add(due);
+      setWateringEvents((events) => [
+        ...events,
+        {
+          id: events.length,
+          hour: Math.floor(due),
+          minute: Math.round((due % 1) * 60),
+          duration: randomBetween(14, 28),
+          fired: true,
+        },
+      ]);
     }, 15000);
 
     return () => clearInterval(interval);

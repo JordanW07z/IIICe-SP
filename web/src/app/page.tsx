@@ -6,7 +6,6 @@ import {
   Camera,
   Cpu,
   Droplets,
-  Gauge,
   Radio,
   Signal,
   Thermometer,
@@ -76,8 +75,8 @@ export default function Home() {
 
   const [metrics, setMetrics] = useState<SensorMetric[]>([
     {
-      id: "temp",
-      label: "Temperature",
+      id: "dht22-temp",
+      label: "Temp (DHT22)",
       value: 24.6,
       min: 21,
       max: 29,
@@ -86,8 +85,8 @@ export default function Home() {
       icon: <Thermometer className="h-4 w-4" />,
     },
     {
-      id: "humidity",
-      label: "Humidity",
+      id: "dht22-humidity",
+      label: "Humidity (DHT22)",
       value: 86.2,
       min: 70,
       max: 95,
@@ -96,24 +95,14 @@ export default function Home() {
       icon: <Droplets className="h-4 w-4" />,
     },
     {
-      id: "co2",
-      label: "CO2 Level",
+      id: "scd41-co2",
+      label: "CO2 (SCD41)",
       value: 612,
       min: 400,
       max: 900,
       unit: "ppm",
       decimals: 0,
       icon: <Wind className="h-4 w-4" />,
-    },
-    {
-      id: "airflow",
-      label: "Airflow",
-      value: 1.4,
-      min: 0.2,
-      max: 3.5,
-      unit: "m/s",
-      decimals: 2,
-      icon: <Gauge className="h-4 w-4" />,
     },
     {
       id: "load",
@@ -220,7 +209,7 @@ export default function Home() {
             <Radio className="h-5 w-5 text-emerald-400" />
             <div>
               <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
-                IIICe-SP Field Monitor
+                SpotShrooms Field Monitor
               </h1>
               <p className="text-[11px] text-zinc-500">
                 YOLOv11 live detection · sim mode

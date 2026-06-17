@@ -88,7 +88,7 @@ function buildHistoricalDay(): CombinedLogEntry[] {
       confidence: randomBetween(0.6, 0.98),
     });
   }
-  const irrigationCount = Math.floor(randomBetween(8, 11));
+  const irrigationCount = Math.floor(randomBetween(9, 13));
   for (let i = 0; i < irrigationCount; i++) {
     const minutesOfDay = Math.floor(randomBetween(0, 1440));
     entries.push({

@@ -71,6 +71,12 @@ function formatHm(hour: number, minute: number) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+function generateDaySchedule(): number[] {
+  const count = Math.floor(randomBetween(9, 13));
+  const hours = Array.from({ length: count }, () => randomBetween(0, 24));
+  return hours.sort((a, b) => a - b);
+}
+
 function buildHistoricalDay(): CombinedLogEntry[] {
   const entries: CombinedLogEntry[] = [];
   const detectionCount = Math.floor(randomBetween(200, 450));
@@ -197,10 +203,10 @@ export default function Home() {
   }, [sessionCounts]);
 
   const [now, setNow] = useState(() => new Date());
+  const [todaySchedule] = useState<number[]>(() => generateDaySchedule());
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
-    const startHours = [0.75, 2.25, 3.75, 4.5, 7, 9.5, 10.25, 13.75, 16, 18.5, 22.25];
     const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-    return startHours
+    return todaySchedule
       .filter((hour) => hour <= currentHour)
       .map((hour, index) => ({
         id: index,
@@ -387,14 +393,13 @@ export default function Home() {
 
   // Clock tick to advance "now" and log misting events as their time passes
   useEffect(() => {
-    const scheduleHours = [0.75, 2.25, 3.75, 4.5, 7, 9.5, 10.25, 13.75, 16, 18.5, 22.25];
     const interval = setInterval(() => {
       const current = new Date();
       setNow(current);
       const currentHour = current.getHours() + current.getMinutes() / 60;
       setWateringEvents((events) => {
         const loggedHours = new Set(events.map((e) => e.hour + e.minute / 60));
-        const due = scheduleHours.find(
+        const due = todaySchedule.find(
           (hour) => hour <= currentHour && !loggedHours.has(hour)
         );
         if (due === undefined) return events;

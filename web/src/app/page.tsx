@@ -208,25 +208,13 @@ export default function Home() {
   }, [sessionCounts]);
 
   const [now, setNow] = useState(() => new Date());
-  const [todaySchedule] = useState<number[]>(() => generateDaySchedule());
   const loggedScheduleHoursRef = useRef<Set<number>>(new Set());
-  const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>(() => {
-    const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
-    const due = todaySchedule.filter((hour) => hour <= currentHour);
-    due.forEach((hour) => loggedScheduleHoursRef.current.add(hour));
-    return due.map((hour, index) => ({
-      id: index,
-      hour: Math.floor(hour),
-      minute: Math.round((hour % 1) * 60),
-      duration: randomBetween(14, 28),
-      fired: true,
-    }));
-  });
+  const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>([]);
   const [eventsPage, setEventsPage] = useState(0);
   const EVENTS_PER_PAGE = 8;
 
-  const [historicalDays] = useState<CombinedLogEntry[][]>(() =>
-    Array.from({ length: 4 }, () => buildHistoricalDay())
+  const [historicalDays, setHistoricalDays] = useState<CombinedLogEntry[][]>(
+    []
   );
   const [logsDayIndex, setLogsDayIndex] = useState(0);
   const [logsPage, setLogsPage] = useState(0);
@@ -397,13 +385,30 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Clock tick to advance "now" and log misting events as their time passes
+  // Generate today's irrigation schedule client-side (avoids SSR/client
+  // hydration mismatch from random values), then tick the clock and log
+  // misting events as their scheduled time passes
   useEffect(() => {
+    const schedule = generateDaySchedule();
+
+    const currentHour = new Date().getHours() + new Date().getMinutes() / 60;
+    const due = schedule.filter((hour) => hour <= currentHour);
+    due.forEach((hour) => loggedScheduleHoursRef.current.add(hour));
+    setWateringEvents(
+      due.map((hour, index) => ({
+        id: index,
+        hour: Math.floor(hour),
+        minute: Math.round((hour % 1) * 60),
+        duration: randomBetween(14, 28),
+        fired: true,
+      }))
+    );
+
     const interval = setInterval(() => {
       const current = new Date();
       setNow(current);
       const currentHour = current.getHours() + current.getMinutes() / 60;
-      const due = todaySchedule.find(
+      const due = schedule.find(
         (hour) =>
           hour <= currentHour && !loggedScheduleHoursRef.current.has(hour)
       );
@@ -422,6 +427,11 @@ export default function Home() {
     }, 15000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Generate historical day data client-side to avoid hydration mismatch
+  useEffect(() => {
+    setHistoricalDays(Array.from({ length: 4 }, () => buildHistoricalDay()));
   }, []);
 
   const todayCombined = useMemo<CombinedLogEntry[]>(() => {

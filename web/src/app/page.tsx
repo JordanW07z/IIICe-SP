@@ -440,14 +440,9 @@ export default function Home() {
         <header className="flex shrink-0 items-center justify-between border-b border-zinc-800 px-4 py-3">
           <div className="flex items-center gap-2">
             <Radio className="h-5 w-5 text-emerald-400" />
-            <div>
-              <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
-                SpotShrooms Field Monitor
-              </h1>
-              <p className="text-[11px] text-zinc-500">
-                YOLOv11 live detection · sim mode
-              </p>
-            </div>
+            <h1 className="text-sm font-semibold tracking-wide text-zinc-100">
+              SpotShrooms Field Monitor
+            </h1>
           </div>
           <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />

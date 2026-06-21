@@ -490,7 +490,7 @@ export default function Home() {
           {activeTab === "monitor" && (
             <>
               {/* Camera / photo viewer */}
-              <section className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
+              <section className="relative w-full min-h-0 flex-1 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
                 {uploadedImageUrl ? (
                   <div
                     className="absolute inset-0 bg-cover bg-center"
@@ -565,7 +565,7 @@ export default function Home() {
               )}
 
               {/* Classification results — cumulative across every photo uploaded this session */}
-              <section>
+              <section className="shrink-0">
                 <div className="mb-2 flex items-center gap-2 px-0.5">
                   <Camera className="h-4 w-4 text-emerald-400" />
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -590,10 +590,6 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <p className="mt-2 text-[10px] text-zinc-600">
-                  {Object.values(sessionCounts).reduce((a, b) => a + b, 0)}{" "}
-                  mushrooms classified across all uploads this session
-                </p>
               </section>
 
             </>

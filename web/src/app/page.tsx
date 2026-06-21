@@ -272,10 +272,6 @@ export default function Home() {
   );
   const [isScanning, setIsScanning] = useState(false);
   const [geminiError, setGeminiError] = useState<string | null>(null);
-  const [lastResultCounts, setLastResultCounts] = useState<Record<
-    string,
-    number
-  > | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = useCallback(async (file: File) => {
@@ -325,7 +321,6 @@ export default function Home() {
         const label = GEMINI_STAGE_TO_LABEL[det.stage] ?? "no_sprout";
         resultCounts[label] = (resultCounts[label] ?? 0) + 1;
       }
-      setLastResultCounts(resultCounts);
 
       // Fold this photo's counts into the running session totals + log.
       const createdAt = new Date();

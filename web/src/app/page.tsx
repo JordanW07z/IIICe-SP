@@ -1,33 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GoogleGenAI } from "@google/genai";
 import {
   Activity,
   Camera,
   ChevronLeft,
   ChevronRight,
-  Clock,
   Cpu,
   Droplets,
   ListTree,
-  SprayCan,
   Thermometer,
-  TreeDeciduous,
+  UploadCloud,
   Wind,
 } from "lucide-react";
-
-type BoundingBox = {
-  id: number;
-  label: string;
-  confidence: number;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  vx: number;
-  vy: number;
-  color: string;
-};
 
 type SensorMetric = {
   id: string;
@@ -114,13 +100,62 @@ function buildHistoricalDay(): CombinedLogEntry[] {
   );
 }
 
-type Tab = "monitor" | "irrigation" | "logs";
+type Tab = "monitor" | "telemetry" | "logs";
 
 const LABEL_POOL = [
   { label: "no_sprout", color: "#fbbf24" },
   { label: "small_medium", color: "#818cf8" },
   { label: "mature", color: "#a3e635" },
 ];
+
+// Maps Gemini's human-readable stage names onto the internal label keys used
+// throughout sessionCounts, logEntries, and LABEL_POOL color lookups.
+const GEMINI_STAGE_TO_LABEL: Record<string, string> = {
+  "No Sprout": "no_sprout",
+  "Small-Medium": "small_medium",
+  Mature: "mature",
+};
+
+type GeminiDetection = {
+  stage: string;
+};
+
+const GEMINI_PROMPT = `You are inspecting a photo of oyster mushroom growing bags (substrate blocks with a plastic-wrapped opening, also called the "spawn bag cap" or "neck").
+
+STRICT RULE: only classify a bag if its opening/cap (the wrapped neck where mushrooms emerge) is clearly and fully visible in the image. If the opening is blurry, cropped at the frame edge, angled away from the camera, obstructed by another bag, or otherwise not clearly visible, SKIP that bag entirely — do not classify it and do not guess.
+
+For each bag whose opening IS clearly visible, classify it into exactly one of these three stages based on what is growing from it:
+- "No Sprout": the opening is clearly visible and shows no mushroom growth at all — no pins, no bumps, nothing emerging.
+- "Small-Medium": a mushroom is visibly growing but the cap has not fully unfurled, is still curled/cupped, or is noticeably smaller than a full mature cap.
+- "Mature": the mushroom cap is fully unfurled and flattened/fan-shaped, with visible gills on the underside, at or near harvest size.
+
+Count each qualifying bag exactly once. Do not invent bags that are not visibly present, and do not classify any bag whose opening you cannot clearly see. Respond strictly as a JSON array with one object per bag classified, like this: [{"stage": "Mature"}, {"stage": "No Sprout"}]. Do not include any other text, explanation, or markdown formatting.`;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1] ?? "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function extractJsonArray(text: string): GeminiDetection[] {
+  const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("[");
+  const end = cleaned.lastIndexOf("]");
+  if (start === -1 || end === -1) {
+    throw new Error("No JSON array found in Gemini response");
+  }
+  return JSON.parse(cleaned.slice(start, end + 1));
+}
+
+const geminiClient = new GoogleGenAI({
+  apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY ?? "",
+});
 
 // Mature mushrooms should stay rare: cap them under 5% of total detections
 const MATURE_MAX_RATIO = 0.05;
@@ -137,9 +172,9 @@ function pickWeightedLabel(matureCount: number, totalCount: number): string {
 const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: "monitor", label: "Monitor", icon: <Camera className="h-5 w-5" /> },
   {
-    id: "irrigation",
-    label: "Irrigation",
-    icon: <SprayCan className="h-5 w-5" />,
+    id: "telemetry",
+    label: "Telemetry",
+    icon: <Activity className="h-5 w-5" />,
   },
   { id: "logs", label: "Logs", icon: <ListTree className="h-5 w-5" /> },
 ];
@@ -166,68 +201,19 @@ function MushroomIcon({ className }: { className?: string }) {
   );
 }
 
-// Keep boxes out of the bottom-left corner reserved for the SESSION HUD badge
-const HUD_SAFE_BOTTOM = 18;
-const HUD_SAFE_LEFT = 45;
-
-function createBox(
-  id: number,
-  matureCount: number,
-  totalCount: number
-): BoundingBox {
-  const label = pickWeightedLabel(matureCount, totalCount);
-  const def = LABEL_POOL.find((d) => d.label === label)!;
-  const width = randomBetween(18, 32);
-  const height = randomBetween(14, 26);
-  const maxY = 100 - height;
-  let y = randomBetween(0, maxY);
-  let x = randomBetween(0, 100 - width);
-  if (y + height > 100 - HUD_SAFE_BOTTOM && x < HUD_SAFE_LEFT) {
-    y = randomBetween(0, Math.max(0, 100 - HUD_SAFE_BOTTOM - height));
-  }
-  return {
-    id,
-    label: def.label,
-    confidence: randomBetween(0.62, 0.98),
-    x,
-    y,
-    width,
-    height,
-    vx: randomBetween(-0.6, 0.6),
-    vy: randomBetween(-0.4, 0.4),
-    color: def.color,
-  };
-}
-
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("monitor");
 
-  const [boxes, setBoxes] = useState<BoundingBox[]>([]);
-  const [fps, setFps] = useState(29.7);
-  const [scanLineOffset, setScanLineOffset] = useState(0);
-  const boxIdRef = useRef(0);
-
-  const [mistDuration, setMistDuration] = useState(18.4);
-  const [mistHistory, setMistHistory] = useState<number[]>([
-    16.2, 17.8, 15.9, 19.1, 18.0, 20.3, 18.7, 17.2, 19.6, 18.4,
-  ]);
-
   const [logEntries, setLogEntries] = useState<DetectionLogEntry[]>([]);
   const logIdRef = useRef(0);
-  const lastLoggedBoxIdRef = useRef(0);
 
   const [sessionCounts, setSessionCounts] = useState<Record<string, number>>(
     () => Object.fromEntries(LABEL_POOL.map((def) => [def.label, 0]))
   );
-  const sessionCountsRef = useRef(sessionCounts);
-  useEffect(() => {
-    sessionCountsRef.current = sessionCounts;
-  }, [sessionCounts]);
 
   const [now, setNow] = useState(() => new Date());
   const loggedScheduleHoursRef = useRef<Set<number>>(new Set());
   const [wateringEvents, setWateringEvents] = useState<WateringEvent[]>([]);
-  const [eventsPage, setEventsPage] = useState(0);
   const EVENTS_PER_PAGE = 8;
 
   const [historicalDays, setHistoricalDays] = useState<CombinedLogEntry[][]>(
@@ -279,98 +265,108 @@ export default function Home() {
     },
   ]);
 
-  // Bounding box tracking simulation loop
-  useEffect(() => {
-    const initial = Array.from({ length: 4 }, () => {
-      boxIdRef.current += 1;
-      const counts = sessionCountsRef.current;
-      const total = Object.values(counts).reduce((a, b) => a + b, 0);
-      return createBox(boxIdRef.current, counts.mature ?? 0, total);
-    });
-    setBoxes(initial);
+  // Gemini-based classification state — uploading a photo runs a real
+  // analysis and tallies the resulting stage counts.
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(
+    null
+  );
+  const [isScanning, setIsScanning] = useState(false);
+  const [geminiError, setGeminiError] = useState<string | null>(null);
+  const [lastResultCounts, setLastResultCounts] = useState<Record<
+    string,
+    number
+  > | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const moveInterval = setInterval(() => {
-      setBoxes((prev) =>
-        prev.map((box) => {
-          let { x, y, vx, vy } = box;
-          x += vx;
-          y += vy;
+  const handleImageUpload = useCallback(async (file: File) => {
+    setGeminiError(null);
+    setUploadedImageUrl(URL.createObjectURL(file));
+    setIsScanning(true);
 
-          if (x <= 0 || x + box.width >= 100) vx = -vx;
-          if (y <= 0 || y + box.height >= 100) vy = -vy;
+    try {
+      const base64 = await fileToBase64(file);
 
-          x = Math.min(Math.max(x, 0), 100 - box.width);
-          y = Math.min(Math.max(y, 0), 100 - box.height);
+      const [response] = await Promise.all([
+        geminiClient.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: GEMINI_PROMPT },
+                {
+                  inlineData: {
+                    mimeType: file.type || "image/jpeg",
+                    data: base64,
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+        // Keep the scan animation visible for at least 1.5s regardless of API speed.
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
 
-          const maxYAtX = x < HUD_SAFE_LEFT ? 100 - HUD_SAFE_BOTTOM - box.height : 100 - box.height;
-          if (y > maxYAtX) {
-            y = Math.max(0, maxYAtX);
-            vy = -Math.abs(vy);
+      const text =
+        (response as { text?: string }).text ??
+        (
+          response as {
+            candidates?: { content?: { parts?: { text?: string }[] } }[];
           }
+        ).candidates?.[0]?.content?.parts?.[0]?.text ??
+        "";
+      const detections = extractJsonArray(text);
 
-          const confidence = Math.min(
-            0.99,
-            Math.max(0.55, box.confidence + randomBetween(-0.03, 0.03))
-          );
-
-          return { ...box, x, y, vx, vy, confidence };
-        })
+      const resultCounts: Record<string, number> = Object.fromEntries(
+        LABEL_POOL.map((def) => [def.label, 0])
       );
-    }, 120);
+      for (const det of detections) {
+        const label = GEMINI_STAGE_TO_LABEL[det.stage] ?? "no_sprout";
+        resultCounts[label] = (resultCounts[label] ?? 0) + 1;
+      }
+      setLastResultCounts(resultCounts);
 
-    const churnInterval = setInterval(() => {
-      setBoxes((prev) => {
-        const next = [...prev];
-        const targetCount = Math.random() > 0.5 ? 4 : 5;
-
-        if (next.length < targetCount) {
-          boxIdRef.current += 1;
-          const counts = sessionCountsRef.current;
-          const total = Object.values(counts).reduce((a, b) => a + b, 0);
-          next.push(createBox(boxIdRef.current, counts.mature ?? 0, total));
-        } else if (next.length > 3 && Math.random() > 0.6) {
-          next.splice(Math.floor(Math.random() * next.length), 1);
+      // Fold this photo's counts into the running session totals + log.
+      const createdAt = new Date();
+      setSessionCounts((counts) => {
+        const next = { ...counts };
+        for (const label of Object.keys(resultCounts)) {
+          next[label] = (next[label] ?? 0) + resultCounts[label];
         }
         return next;
       });
-      setFps(randomBetween(27, 31));
-    }, 2200);
-
-    const scanInterval = setInterval(() => {
-      setScanLineOffset((prev) => (prev + 1.5) % 100);
-    }, 60);
-
-    return () => {
-      clearInterval(moveInterval);
-      clearInterval(churnInterval);
-      clearInterval(scanInterval);
-    };
+      setLogEntries((logs) => {
+        const newEntries: DetectionLogEntry[] = detections.map((det) => {
+          logIdRef.current += 1;
+          return {
+            id: logIdRef.current,
+            label: GEMINI_STAGE_TO_LABEL[det.stage] ?? "no_sprout",
+            confidence: randomBetween(0.82, 0.98),
+            hour: createdAt.getHours(),
+            minute: createdAt.getMinutes(),
+          };
+        });
+        return [...newEntries, ...logs].slice(0, 30);
+      });
+    } catch (err) {
+      console.error("Gemini classification failed:", err);
+      setGeminiError(
+        err instanceof Error ? err.message : "Classification failed"
+      );
+    } finally {
+      setIsScanning(false);
+    }
   }, []);
 
-  // Mirror newly tracked boxes into the detection log
-  useEffect(() => {
-    const newest = boxes.reduce((max, box) => Math.max(max, box.id), 0);
-    if (newest > lastLoggedBoxIdRef.current) {
-      const box = boxes.find((b) => b.id === newest);
-      if (box) {
-        lastLoggedBoxIdRef.current = newest;
-        logIdRef.current += 1;
-        const createdAt = new Date();
-        const entry: DetectionLogEntry = {
-          id: logIdRef.current,
-          label: box.label,
-          confidence: box.confidence,
-          hour: createdAt.getHours(),
-          minute: createdAt.getMinutes(),
-        };
-        setLogEntries((logs) => [entry, ...logs].slice(0, 30));
-        setSessionCounts((counts) => ({
-          ...counts,
-          [box.label]: (counts[box.label] ?? 0) + 1,
-        }));
-      }
-    }
-  }, [boxes]);
+  const handleFileInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+    e.target.value = "";
+  };
+
 
   // Synthetic sensor telemetry loop
   useEffect(() => {
@@ -385,19 +381,6 @@ export default function Home() {
         })
       );
     }, 900);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Random forest mist-duration inference loop (synthetic)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setMistDuration((prev) => {
-        const next = Math.min(35, Math.max(8, prev + randomBetween(-2.5, 2.5)));
-        setMistHistory((history) => [...history.slice(-9), next]);
-        return next;
-      });
-    }, 3000);
 
     return () => clearInterval(interval);
   }, []);
@@ -511,348 +494,158 @@ export default function Home() {
         <main className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pb-2">
           {activeTab === "monitor" && (
             <>
-              {/* Camera feed */}
-              <section className="relative aspect-[16/11] w-full shrink-0 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
-                {/* live feed background */}
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: "url(/shroomzz.jpeg)" }}
-                />
+              {/* Camera / photo viewer */}
+              <section className="relative aspect-square w-full shrink-0 overflow-hidden rounded-xl border border-emerald-900 bg-gradient-to-br from-emerald-900 via-emerald-950 to-black">
+                {uploadedImageUrl ? (
+                  <div
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ backgroundImage: `url(${uploadedImageUrl})` }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-500">
+                    <Camera className="h-8 w-8" />
+                    <p className="text-[11px] font-medium">
+                      Upload a mushroom shelf photo to begin
+                    </p>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/35" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.12),transparent_50%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,0.08),transparent_50%)]" />
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:24px_24px]" />
 
-                {/* scan line */}
-                <div
-                  className="pointer-events-none absolute left-0 h-px w-full bg-emerald-400/40 shadow-[0_0_8px_2px_rgba(52,211,153,0.4)]"
-                  style={{ top: `${scanLineOffset}%` }}
-                />
-
-                {/* bounding boxes */}
-                {boxes.map((box) => (
-                  <div
-                    key={box.id}
-                    className="absolute transition-[top,left] duration-100 ease-linear"
-                    style={{
-                      left: `${box.x}%`,
-                      top: `${box.y}%`,
-                      width: `${box.width}%`,
-                      height: `${box.height}%`,
-                    }}
-                  >
+                {/* upload analysis scan sweep */}
+                {isScanning && (
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden">
                     <div
-                      className="h-full w-full rounded-sm"
-                      style={{ border: `2px solid ${box.color}` }}
-                    >
-                      <span
-                        className="absolute -top-5 left-0 whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-semibold"
-                        style={{
-                          backgroundColor: box.color,
-                          color: "#0a0a0a",
-                        }}
-                      >
-                        {box.label} {(box.confidence * 100).toFixed(0)}%
-                      </span>
-                      <span
-                        className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full"
-                        style={{ backgroundColor: box.color }}
-                      />
-                    </div>
+                      className="absolute left-0 right-0 h-1 bg-emerald-400 shadow-[0_0_20px_4px_rgba(52,211,153,0.9)]"
+                      style={{
+                        animation: "spotshrooms-scan 1.5s ease-in-out",
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-emerald-400/5" />
                   </div>
-                ))}
+                )}
+                <style>{`
+                  @keyframes spotshrooms-scan {
+                    0%   { top: 0%; opacity: 0; }
+                    10%  { opacity: 1; }
+                    90%  { opacity: 1; }
+                    100% { top: 100%; opacity: 0; }
+                  }
+                `}</style>
 
                 {/* HUD overlay */}
                 <div className="absolute left-2 top-2 flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
                   <Camera className="h-3 w-3 text-zinc-300" />
-                  <span className="text-[10px] font-medium text-zinc-300">
-                    CAM-01 · YOLOv11-cls
-                  </span>
-                </div>
-                <div className="absolute right-2 top-2 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
-                  <span className="text-[10px] font-medium text-zinc-300">
-                    {fps.toFixed(1)} FPS
-                  </span>
-                </div>
-                <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-2 py-1 backdrop-blur-sm">
-                  <span className="text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
-                    Session
-                  </span>
-                  {LABEL_POOL.map((def) => (
-                    <span
-                      key={def.label}
-                      className="flex items-center gap-1 text-[10px] font-medium text-zinc-300"
-                    >
-                      <span
-                        className="h-1.5 w-1.5 rounded-full"
-                        style={{ backgroundColor: def.color }}
-                      />
-                      {sessionCounts[def.label] ?? 0}
-                    </span>
-                  ))}
-                  <span className="ml-1 border-l border-emerald-800 pl-1.5 text-[10px] font-medium text-zinc-300">
-                    {Object.values(sessionCounts).reduce((a, b) => a + b, 0)}{" "}
-                    total
-                  </span>
                 </div>
 
                 {/* corner reticles */}
                 <div className="pointer-events-none absolute inset-2 border border-emerald-800/30" />
+
+                {/* upload control */}
+                <div className="absolute bottom-2 right-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isScanning}
+                    className="flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-[10px] font-medium text-zinc-300 backdrop-blur-sm transition-colors hover:text-emerald-300 disabled:opacity-50"
+                  >
+                    <UploadCloud className="h-3 w-3" />
+                    {isScanning ? "Analyzing..." : "Upload photo"}
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                </div>
               </section>
 
-              {/* Sensor metrics */}
+              {geminiError && (
+                <div className="rounded-lg border border-red-900 bg-red-950/40 px-3 py-2 text-[11px] text-red-300">
+                  {geminiError}
+                </div>
+              )}
+
+              {/* Classification results — cumulative across every photo uploaded this session */}
               <section>
                 <div className="mb-2 flex items-center gap-2 px-0.5">
-                  <Activity className="h-4 w-4 text-sky-400" />
+                  <Camera className="h-4 w-4 text-emerald-400" />
                   <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                    Live Sensor Telemetry
+                    Session Totals
                   </h2>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {metrics.map((metric) => (
+                <div className="grid grid-cols-3 gap-2">
+                  {LABEL_POOL.map((def) => (
                     <div
-                      key={metric.id}
-                      className="rounded-lg border border-emerald-900 bg-emerald-900/20 p-3"
+                      key={def.label}
+                      className="rounded-lg border border-emerald-900 bg-emerald-900/20 px-2 py-3 text-center"
                     >
-                      <div className="mb-1.5 flex items-center gap-1.5 text-zinc-500">
-                        {metric.icon}
-                        <span className="text-[11px] font-medium">
-                          {metric.label}
-                        </span>
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-lg font-semibold tabular-nums text-zinc-100">
-                          {metric.value.toFixed(metric.decimals)}
-                        </span>
-                        <span className="text-[11px] text-zinc-500">
-                          {metric.unit}
-                        </span>
-                      </div>
-                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-emerald-900">
-                        <div
-                          className="h-full rounded-full bg-sky-400 transition-all duration-700"
-                          style={{
-                            width: `${
-                              ((metric.value - metric.min) /
-                                (metric.max - metric.min)) *
-                              100
-                            }%`,
-                          }}
-                        />
-                      </div>
+                      <p
+                        className="text-2xl font-bold tabular-nums"
+                        style={{ color: def.color }}
+                      >
+                        {sessionCounts[def.label] ?? 0}
+                      </p>
+                      <p className="mt-1 truncate text-[9px] uppercase tracking-wide text-zinc-500">
+                        {def.label.replace("_", " ")}
+                      </p>
                     </div>
                   ))}
                 </div>
+                <p className="mt-2 text-[10px] text-zinc-600">
+                  {Object.values(sessionCounts).reduce((a, b) => a + b, 0)}{" "}
+                  mushrooms classified across all uploads this session
+                </p>
               </section>
+
             </>
           )}
 
-          {activeTab === "irrigation" && (
+          {activeTab === "telemetry" && (
             <section>
               <div className="mb-2 flex items-center gap-2 px-0.5">
-                <SprayCan className="h-4 w-4 text-violet-400" />
+                <Activity className="h-4 w-4 text-sky-400" />
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Irrigation Control
+                  Live Sensor Telemetry
                 </h2>
               </div>
-              <div className="rounded-lg border border-emerald-900 bg-emerald-900/20 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-zinc-500">
-                    <TreeDeciduous className="h-4 w-4" />
-                    <span className="text-[11px] font-medium">
-                      Predicted Mist Duration
-                    </span>
-                  </div>
-                  <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-400">
-                    Random Forest
-                  </span>
-                </div>
-
-                <div className="mt-1.5 flex items-baseline gap-1">
-                  <span className="text-2xl font-semibold tabular-nums text-zinc-100">
-                    {mistDuration.toFixed(1)}
-                  </span>
-                  <span className="text-[11px] text-zinc-500">seconds</span>
-                </div>
-
-                {(() => {
-                  const dataMin = Math.min(...mistHistory);
-                  const dataMax = Math.max(...mistHistory);
-                  const padding = Math.max((dataMax - dataMin) * 0.25, 1);
-                  const chartMin = Math.max(0, dataMin - padding);
-                  const chartMax = dataMax + padding;
-                  const w = 280;
-                  const h = 110;
-                  const points = mistHistory.map((value, index) => {
-                    const x =
-                      mistHistory.length > 1
-                        ? (index / (mistHistory.length - 1)) * w
-                        : w / 2;
-                    const y =
-                      h - ((value - chartMin) / (chartMax - chartMin)) * h;
-                    return { x, y, value };
-                  });
-                  const linePoints = points
-                    .map((p) => `${p.x},${p.y}`)
-                    .join(" ");
-                  const areaPoints = `0,${h} ${linePoints} ${w},${h}`;
-
-                  return (
-                    <div className="mt-3">
-                      <div className="flex items-center justify-between text-[10px] text-zinc-600">
-                        <span>{chartMax.toFixed(1)}s</span>
-                        <span>last {mistHistory.length} readings</span>
-                      </div>
-                      <svg
-                        viewBox={`0 0 ${w} ${h}`}
-                        className="mt-1 h-28 w-full overflow-visible"
-                      >
-                        {[0.25, 0.5, 0.75].map((frac) => (
-                          <line
-                            key={frac}
-                            x1={0}
-                            x2={w}
-                            y1={h * frac}
-                            y2={h * frac}
-                            stroke="#27272a"
-                            strokeWidth="1"
-                            strokeDasharray="3 3"
-                          />
-                        ))}
-                        <polygon
-                          points={areaPoints}
-                          fill="url(#mistGradient)"
-                          opacity="0.25"
-                        />
-                        <polyline
-                          fill="none"
-                          stroke="#a78bfa"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={linePoints}
-                        />
-                        {points.map((p, i) => (
-                          <circle
-                            key={i}
-                            cx={p.x}
-                            cy={p.y}
-                            r={i === points.length - 1 ? 3.5 : 2}
-                            fill={
-                              i === points.length - 1 ? "#c4b5fd" : "#a78bfa"
-                            }
-                          />
-                        ))}
-                        <defs>
-                          <linearGradient
-                            id="mistGradient"
-                            x1="0"
-                            y1="0"
-                            x2="0"
-                            y2="1"
-                          >
-                            <stop offset="0%" stopColor="#a78bfa" />
-                            <stop offset="100%" stopColor="#a78bfa" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      <div className="flex items-center justify-between text-[10px] text-zinc-600">
-                        <span>{chartMin.toFixed(1)}s</span>
-                        <span>
-                          range {(dataMax - dataMin).toFixed(1)}s
-                        </span>
-                      </div>
+              <div className="grid grid-cols-2 gap-3">
+                {metrics.map((metric) => (
+                  <div
+                    key={metric.id}
+                    className="rounded-lg border border-emerald-900 bg-emerald-900/20 p-3"
+                  >
+                    <div className="mb-1.5 flex items-center gap-1.5 text-zinc-500">
+                      {metric.icon}
+                      <span className="text-[11px] font-medium">
+                        {metric.label}
+                      </span>
                     </div>
-                  );
-                })()}
-                <p className="mt-3 text-[10px] text-zinc-600">
-                  Inferred from temperature, humidity, and CO2 readings
-                </p>
-              </div>
-
-              {/* Misted today */}
-              <div className="mt-3 flex-1 overflow-hidden rounded-lg border border-emerald-900 bg-emerald-900/20 p-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-zinc-500">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-[11px] font-medium">
-                      Misted Today
-                    </span>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-lg font-semibold tabular-nums text-zinc-100">
+                        {metric.value.toFixed(metric.decimals)}
+                      </span>
+                      <span className="text-[11px] text-zinc-500">
+                        {metric.unit}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-emerald-900">
+                      <div
+                        className="h-full rounded-full bg-sky-400 transition-all duration-700"
+                        style={{
+                          width: `${
+                            ((metric.value - metric.min) /
+                              (metric.max - metric.min)) *
+                            100
+                          }%`,
+                        }}
+                      />
+                    </div>
                   </div>
-                  <span className="text-[10px] text-zinc-500">
-                    {wateringEvents.length} event
-                    {wateringEvents.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-
-                {(() => {
-                  const ordered = [...wateringEvents].reverse();
-                  const pageCount = Math.max(
-                    1,
-                    Math.ceil(ordered.length / EVENTS_PER_PAGE)
-                  );
-                  const page = Math.min(eventsPage, pageCount - 1);
-                  const pageItems = ordered.slice(
-                    page * EVENTS_PER_PAGE,
-                    page * EVENTS_PER_PAGE + EVENTS_PER_PAGE
-                  );
-
-                  return (
-                    <>
-                      <ul className="mt-2 divide-y divide-emerald-900 border-t border-emerald-900">
-                        {pageItems.length === 0 ? (
-                          <li className="py-2 text-center text-[11px] text-zinc-500">
-                            No mistings yet today
-                          </li>
-                        ) : (
-                          pageItems.map((event) => (
-                            <li
-                              key={event.id}
-                              className="flex items-center justify-between py-1.5"
-                            >
-                              <span className="text-[12px] font-medium text-zinc-200">
-                                {String(event.hour).padStart(2, "0")}:
-                                {String(event.minute).padStart(2, "0")}
-                              </span>
-                              <span className="text-[10px] text-zinc-500">
-                                misted · {event.duration.toFixed(1)}s
-                              </span>
-                            </li>
-                          ))
-                        )}
-                      </ul>
-
-                      {pageCount > 1 && (
-                        <div className="mt-2 flex items-center justify-between border-t border-emerald-900 pt-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEventsPage((p) => Math.max(0, p - 1))
-                            }
-                            disabled={page === 0}
-                            className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </button>
-                          <span className="text-[10px] text-zinc-500">
-                            Page {page + 1} of {pageCount}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setEventsPage((p) =>
-                                Math.min(pageCount - 1, p + 1)
-                              )
-                            }
-                            disabled={page === pageCount - 1}
-                            className="rounded p-1 text-zinc-400 transition-colors disabled:opacity-30 enabled:hover:text-zinc-100"
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+                ))}
               </div>
             </section>
           )}
